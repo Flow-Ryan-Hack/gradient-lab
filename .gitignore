@@ -2,3 +2,5 @@
 serve.py
 exports/
 .DS_Store
+_*.json
+_*.html

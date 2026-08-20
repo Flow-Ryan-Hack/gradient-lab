@@ -2374,7 +2374,13 @@ window.gradientLab = {
   select: i => applyShowcase(i),
   frame: (i, n) => renderPostFrame(i, n),
   postCanvas: () => postCv,
-  size: () => [POST_W, POST_H]
+  size: () => [POST_W, POST_H],
+  /* Load a full state and render the bare gradient (no post frame). */
+  apply: st => { S = normalize(Object.assign(DEFAULT(), st)); syncAll(); },
+  gradientFrame: (i, n, scale) => { const k = scale || 1;
+    sizeCanvas(Math.round(S.w * k), Math.round(S.h * k)); draw(i / n, k); },
+  canvas: () => cv,
+  state: () => JSON.parse(JSON.stringify(S))
 };
 
 /* Start */
