@@ -1,0 +1,2403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradient Lab — Showcase</title>
+<style>
+  /* ── flohack CI: light ground, monospace, neon only as an accent ── */
+  :root{
+    --ink:#15181D; --mid:#5C6470; --soft:#8A929E; --faint:#AEB5BE;
+    --line:#DDE1E7; --line2:#C9CFD7;
+    --paper:#FFFFFF; --wash:#F2F4F7;
+    --neon:#C5F53C; --dark:#414855;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --lbl:400 10px/1.45 var(--mono);
+    --r:4px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--wash); color:var(--ink);
+    font:12px/1.5 var(--mono);
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  #app{display:grid; grid-template-columns:1fr 380px; grid-template-rows:minmax(0,1fr);
+    height:100vh}
+
+  /* ── Stage ───────────────────────────────────────────────────────── */
+  #stage{position:relative; display:flex; align-items:center; justify-content:center;
+    padding:44px; min-width:0; min-height:0;
+    background:linear-gradient(150deg, #FFFFFF 0%, #EFF2F6 55%, #E7EBF1 100%)}
+  #frame{position:relative; overflow:hidden; background:#fff;
+    box-shadow:0 1px 0 rgba(21,24,29,.06), 0 18px 50px -24px rgba(21,24,29,.35),
+      0 0 0 1px var(--line)}
+  canvas{display:block; width:100%; height:100%}
+  #handles{position:absolute; inset:0; pointer-events:none}
+  .handle{position:absolute; width:24px; height:24px; margin:-12px 0 0 -12px; border-radius:50%;
+    border:1.5px solid #fff; box-shadow:0 0 0 1px rgba(21,24,29,.45), 0 2px 6px rgba(0,0,0,.3);
+    cursor:grab; pointer-events:auto; transition:transform .1s;
+    display:flex; align-items:center; justify-content:center;
+    font:500 9px/1 var(--mono); user-select:none}
+  .handle:hover{transform:scale(1.15)}
+  .handle.drag{cursor:grabbing; transform:scale(1.2); border-color:var(--neon)}
+  #hud{position:absolute; left:0; right:0; bottom:16px; display:flex; justify-content:center;
+    font:var(--lbl); letter-spacing:.1em; color:var(--faint); pointer-events:none}
+  #stage .toolbar{position:absolute; top:22px; left:50%; transform:translateX(-50%);
+    display:flex; background:var(--paper); border:1px solid var(--line);
+    border-radius:var(--r); overflow:hidden; z-index:5;
+    box-shadow:0 2px 8px -4px rgba(21,24,29,.2)}
+  .toolbar button{background:transparent; border:0; border-right:1px solid var(--line);
+    color:var(--mid); font:var(--lbl); letter-spacing:.08em; text-transform:lowercase;
+    padding:9px 13px; cursor:pointer; white-space:nowrap}
+  .toolbar button:last-child{border-right:0}
+  .toolbar button:hover{color:var(--ink); background:var(--wash)}
+  .toolbar button.on{background:var(--dark); color:#fff}
+
+  /* ── Panel ───────────────────────────────────────────────────────── */
+  #panel{background:var(--paper); border-left:1px solid var(--line);
+    min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    display:flex; flex-direction:column}
+  #panel::-webkit-scrollbar{width:10px}
+  #panel::-webkit-scrollbar-thumb{background:var(--line2); border:3px solid var(--paper);
+    border-radius:5px}
+  .head{padding:22px 20px 16px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:var(--paper); z-index:4}
+  .head h1{font:500 13px/1 var(--mono); letter-spacing:.02em;
+    background:var(--neon); display:inline-block; padding:5px 9px; border-radius:2px}
+  .head p{font:var(--lbl); color:var(--soft); margin-top:9px}
+
+  section{border-bottom:1px solid var(--line)}
+  section > h2{padding:16px 20px 14px; cursor:pointer; user-select:none;
+    display:flex; align-items:baseline; gap:10px; position:relative}
+  section > h2 b{font:500 12px/1 var(--mono); color:var(--ink)}
+  section > h2 i{font:var(--lbl); font-style:normal; color:var(--faint)}
+  section > h2::after{content:"−"; position:absolute; right:20px; top:15px;
+    color:var(--faint); font:400 12px var(--mono)}
+  section.closed > h2::after{content:"+"}
+  section:hover > h2 b{color:#000}
+  section.closed .body{display:none}
+  .body{padding:0 20px 20px; display:flex; flex-direction:column; gap:10px}
+
+  .row{display:grid; grid-template-columns:82px 1fr 38px; align-items:center; gap:10px}
+  .row label{font:var(--lbl); color:var(--mid); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis}
+  .row output{font:var(--lbl); color:var(--faint); text-align:right;
+    font-variant-numeric:tabular-nums}
+
+  input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:16px;
+    background:transparent; cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:1px; background:var(--line2)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:6px; height:12px;
+    margin-top:-5.5px; background:var(--dark); border:0; border-radius:1px}
+  input[type=range]:hover::-webkit-slider-thumb{background:var(--ink)}
+  input[type=range]:active::-webkit-slider-thumb{background:var(--neon);
+    box-shadow:0 0 0 1px var(--dark)}
+
+  select,input[type=text],input[type=number]{width:100%; background:var(--paper);
+    color:var(--ink); border:1px solid var(--line); border-radius:var(--r);
+    padding:7px 8px; font:11px/1.2 var(--mono); outline:none}
+  select:focus,input[type=text]:focus,input[type=number]:focus{border-color:var(--dark)}
+  input[type=color]{width:26px; height:26px; padding:0; border:1px solid var(--line);
+    border-radius:var(--r); background:none; cursor:pointer; flex:0 0 auto}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border:none; border-radius:2px}
+
+  .btn{background:var(--paper); color:var(--ink); border:1px solid var(--line);
+    border-radius:var(--r); padding:8px 10px; font:var(--lbl); letter-spacing:.06em;
+    text-transform:lowercase; cursor:pointer; text-align:center; white-space:nowrap}
+  .btn:hover{border-color:var(--dark)}
+  .btn.pri{background:var(--dark); color:#fff; border-color:var(--dark)}
+  .btn.pri:hover{background:var(--neon); color:var(--ink); border-color:var(--neon)}
+  .btn:disabled{opacity:.4; cursor:not-allowed}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px}
+
+  .chips{display:flex; flex-wrap:wrap; gap:5px}
+  .chip{border:1px solid var(--line); background:var(--paper); color:var(--mid);
+    border-radius:var(--r); padding:6px 9px; font:var(--lbl); letter-spacing:.06em;
+    cursor:pointer}
+  .chip{text-transform:lowercase}
+  .chip:hover{color:var(--ink); border-color:var(--line2)}
+  .chip.on{background:var(--dark); color:#fff; border-color:var(--dark)}
+
+  .seg{display:flex; border:1px solid var(--line); border-radius:var(--r);
+    overflow:hidden; margin-top:14px}
+  .seg button{flex:1; background:transparent; border:0; border-right:1px solid var(--line);
+    color:var(--mid); font:var(--lbl); letter-spacing:.06em; text-transform:lowercase;
+    padding:7px 6px; cursor:pointer}
+  .seg button:last-child{border-right:0}
+  .seg button:hover{color:var(--ink)}
+  .seg button.on{background:var(--dark); color:#fff}
+
+  /* ── Look cards ──────────────────────────────────────────────────── */
+  .looks{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+  .look{border:1px solid var(--line); border-radius:var(--r); overflow:hidden;
+    cursor:pointer; background:var(--paper); text-align:left; padding:0; font:inherit;
+    color:var(--ink)}
+  .look:hover{border-color:var(--line2)}
+  .look.on{border-color:var(--dark)}
+  .look.on .nm{background:var(--dark); color:#fff}
+  .look .pv{height:52px; display:block}
+  .look .nm{display:block; padding:6px 8px 7px; font:var(--lbl); letter-spacing:.06em;
+    text-transform:lowercase}
+
+  /* ── Palettes ────────────────────────────────────────────────────── */
+  .pals{display:flex; flex-direction:column; gap:3px; margin-top:2px}
+  .palwrap{display:grid; grid-template-columns:96px 1fr; align-items:center; gap:12px;
+    cursor:pointer; padding:2px 0}
+  .palwrap:hover small{color:var(--ink)}
+  .palwrap small{font:var(--lbl); color:var(--soft); text-align:right;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pal{display:flex; height:14px; border-radius:2px; overflow:hidden; cursor:pointer;
+    box-shadow:0 0 0 1px var(--line) inset}
+  .pal:hover{box-shadow:0 0 0 1px var(--line2) inset}
+  .pal i{flex:1}
+
+  /* ── Colour stops ────────────────────────────────────────────────── */
+  .stop{display:flex; align-items:center; gap:8px; background:var(--paper);
+    border:1px solid var(--line); border-radius:var(--r); padding:7px 8px; margin-bottom:4px}
+  .stop .hex{flex:1; min-width:0; background:transparent; border:0; color:var(--ink);
+    font:11px/1.2 var(--mono); outline:none}
+  .stop .rad{width:58px; flex:0 0 auto}
+  .stop .x{background:transparent; border:0; color:var(--faint); cursor:pointer;
+    font:400 13px/1 var(--mono); padding:2px 3px}
+  .stop .x:hover{color:#C0392B}
+  .stop .num{flex:0 0 auto; width:12px; text-align:center; font:var(--lbl);
+    color:var(--faint); font-variant-numeric:tabular-nums}
+  .stop .more{background:transparent; border:0; color:var(--faint); cursor:pointer;
+    font-size:9px; padding:2px 4px}
+  .stop .more:hover{color:var(--ink)}
+  .stop.open{border-radius:var(--r) var(--r) 0 0; border-bottom-color:transparent;
+    margin-bottom:0}
+  .detail{display:none; grid-template-columns:74px 1fr 36px; gap:6px 9px;
+    align-items:center; padding:9px 10px 11px 28px; background:var(--wash);
+    border:1px solid var(--line); border-top:0; border-radius:0 0 var(--r) var(--r);
+    margin-bottom:4px}
+  .detail.open{display:grid}
+  .detail label{font:var(--lbl); color:var(--mid)}
+  .detail output{font:var(--lbl); color:var(--faint); text-align:right;
+    font-variant-numeric:tabular-nums}
+
+  .note{font:10px/1.65 var(--mono); color:var(--faint)}
+  code{font:10px var(--mono); color:var(--mid)}
+  textarea{width:100%; height:120px; background:var(--wash); color:var(--mid);
+    border:1px solid var(--line); border-radius:var(--r); padding:9px;
+    font:10px/1.6 var(--mono); resize:vertical; outline:none}
+
+  .foot{margin-top:auto; padding:16px 20px 20px; border-top:1px solid var(--line);
+    display:flex; gap:16px; align-items:center}
+  .foot a{color:var(--faint); text-decoration:none; font:var(--lbl); letter-spacing:.08em}
+  .foot a:hover{color:var(--ink)}
+
+  body.simple .adv{display:none !important}
+
+  /* ── Intro / showcase ────────────────────────────────────────────── */
+  #intro{position:fixed; inset:0; z-index:60;
+    background:linear-gradient(150deg, #FFFFFF 0%, #EFF2F6 55%, #E7EBF1 100%);
+    display:flex; flex-direction:column; padding:36px 44px 32px;
+    opacity:1; transition:opacity .35s}
+  #intro.hide{opacity:0; pointer-events:none}
+  .intro-top{display:flex; justify-content:space-between; align-items:center;
+    font:var(--lbl); letter-spacing:.14em; color:var(--faint)}
+  .intro-top a{color:var(--faint); text-decoration:none}
+  .intro-top a:hover{color:var(--ink)}
+
+  .intro-h{margin:0 0 20px; max-width:17ch; text-wrap:balance;
+    font:400 clamp(22px,2.4vw,34px)/1.25 var(--mono); letter-spacing:-.01em; color:var(--ink)}
+  .intro-h b{display:block; font-weight:400; color:var(--soft)}
+  .intro-sub{font:10.5px/1.9 var(--mono); color:var(--soft); max-width:46ch;
+    margin-bottom:24px}
+  .intro-sub b{color:var(--ink); font-weight:400;
+    background:var(--neon); padding:1px 3px; border-radius:2px}
+
+  .intro-stage{flex:1; min-height:0; display:grid;
+    grid-template-columns:minmax(0,1fr) auto; grid-template-rows:minmax(0,1fr);
+    gap:48px; align-items:center; margin-top:16px}
+  .intro-left{display:flex; flex-direction:column; justify-content:center; min-width:0}
+  .shot{position:relative; height:100%; min-height:0; display:flex;
+    align-items:center; justify-content:flex-end}
+  .shot > canvas{max-height:100%; max-width:100%; width:auto; height:auto;
+    box-shadow:0 1px 0 rgba(21,24,29,.06), 0 20px 60px -28px rgba(21,24,29,.45),
+      0 0 0 1px var(--line)}
+
+  .intro-bar{display:flex; align-items:center; gap:14px; margin-top:20px}
+  .intro-bar .nav{background:var(--paper); border:1px solid var(--line);
+    border-radius:var(--r); color:var(--mid); width:30px; height:30px; cursor:pointer;
+    font:400 14px/1 var(--mono)}
+  .intro-bar .nav:hover{border-color:var(--dark); color:var(--ink)}
+  .dots{display:flex; gap:6px}
+  .dots i{width:5px; height:5px; border-radius:50%; background:var(--line2);
+    cursor:pointer; display:block}
+  .dots i.on{background:var(--dark)}
+  .sc-name{font:var(--lbl); letter-spacing:.14em; color:var(--mid); text-transform:lowercase}
+  .intro-bar .sp{flex:1}
+  .intro-bar .btn{padding:10px 18px}
+
+  /* ── Overlays ────────────────────────────────────────────────────── */
+  #toast{position:fixed; bottom:26px; left:50%; transform:translate(-50%,14px);
+    background:var(--dark); border:0; color:#fff; padding:10px 16px; border-radius:var(--r);
+    font:var(--lbl); letter-spacing:.06em; text-transform:lowercase;
+    opacity:0; pointer-events:none; transition:.18s; z-index:99}
+  #toast.on{opacity:1; transform:translate(-50%,0)}
+  #rec{position:fixed; inset:0; background:rgba(242,244,247,.95); display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:18px; z-index:80}
+  #rec.on{display:flex}
+  #rec #recTxt{font:var(--lbl); letter-spacing:.1em; color:var(--mid)}
+  #rec .bar{width:280px; height:2px; background:var(--line2); overflow:hidden;
+    border-radius:1px}
+  #rec .bar i{display:block; height:100%; width:0; background:var(--neon); transition:width .1s}
+  #err{padding:48px; max-width:520px; margin:auto; color:var(--mid); line-height:1.7}
+
+  @media (max-width:900px){
+    #app{grid-template-columns:1fr; grid-template-rows:minmax(240px,42vh) auto;
+      height:auto; min-height:100vh; overflow:visible}
+    body{overflow:auto}
+    #panel{border-left:0; border-top:1px solid var(--line); overflow:visible}
+    #stage{padding:18px}
+    #intro{padding:22px 18px; overflow-y:auto}
+    .intro-stage{grid-template-columns:1fr; gap:14px}
+    .shot{min-height:320px}
+  }
+</style>
+</head>
+<body>
+<div id="intro">
+  <div class="intro-top">
+    <span></span>
+    <a href="https://flohack.com" target="_blank" rel="noopener">flohack.com</a>
+  </div>
+
+  <div class="intro-stage">
+    <div class="intro-left">
+      <h1 class="intro-h">use this gradient editor <b>to elevate your graphic work.</b></h1>
+      <p class="intro-sub">mesh gradients blended in oklab, dithered against banding,
+        with film grain on top. <b>export as image, as a seamless video loop, or as css.</b>
+        every slide below is a ready-made 1080 × 1350 post.</p>
+      <div class="intro-bar">
+        <button class="nav" id="iPrev" aria-label="Previous">‹</button>
+        <button class="nav" id="iNext" aria-label="Next">›</button>
+        <div class="dots" id="iDots"></div>
+        <span class="sc-name" id="scName"></span>
+      </div>
+      <div class="intro-bar">
+        <button class="btn" id="iSave">save png</button>
+        <button class="btn" id="iMp4">video</button>
+        <button class="btn" id="iGif">gif</button>
+        <button class="btn pri" id="iOpen">open editor</button>
+      </div>
+      <div class="intro-bar">
+        <button class="btn" id="iAll">export all</button>
+        <select id="iDur" title="Clip length">
+          <option value="6">6 s</option>
+          <option value="10" selected>10 s</option>
+          <option value="15">15 s</option>
+        </select>
+        <select id="iGw" title="GIF width">
+          <option value="360">GIF 360</option>
+          <option value="540" selected>GIF 540</option>
+          <option value="720">GIF 720</option>
+        </select>
+      </div>
+    </div>
+    <div class="shot" id="shot"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="stage">
+    <div class="toolbar">
+      <button id="tPlay" class="on">Pause</button>
+      <button id="tRnd">Random</button>
+      <button id="tShuffle">Shuffle</button>
+      <button id="tHandles" class="on">Handles</button>
+      <button id="tFit">Actual size</button>
+    </div>
+    <div id="frame">
+      <canvas id="gl"></canvas>
+      <div id="handles"></div>
+    </div>
+    <div id="hud"><span id="hudTxt"></span></div>
+  </div>
+
+  <div id="panel">
+    <div class="head">
+      <h1>gradient lab</h1>
+      <p>mesh gradients · oklab · grain</p>
+      <div class="seg" id="segMode">
+        <button data-adv="0" class="on">essentials</button>
+        <button data-adv="1">everything</button>
+      </div>
+    </div>
+
+    <section id="s-look">
+      <h2><b>look</b><i>preset · palette</i></h2>
+      <div class="body">
+        <div class="looks" id="lookList"></div>
+        <div class="pals" id="palList"></div>
+        <div class="grid2 adv">
+          <button class="btn" id="bSaveP">save preset</button>
+          <select id="myPresets"><option value="">saved …</option></select>
+        </div>
+      </div>
+    </section>
+
+    <section id="s-colors">
+      <h2><b>colours</b><i>points</i></h2>
+      <div class="body">
+        <div class="row">
+          <label for="baseCol">ground</label>
+          <input type="color" id="baseCol" value="#000000" style="width:100%; height:26px">
+          <output id="baseHex">#000</output>
+        </div>
+        <div class="row">
+          <label for="baseW">weight</label>
+          <input type="range" id="baseW" min="0" max="3" step="0.01" value="0.9">
+          <output></output>
+        </div>
+        <div id="stops"></div>
+        <div class="grid2">
+          <button class="btn" id="bAdd">+ colour</button>
+          <button class="btn" id="bSpread">redistribute</button>
+        </div>
+        <p class="note">drag points on the canvas · the row slider sets reach</p>
+      </div>
+    </section>
+
+    <section id="s-form">
+      <h2><b>form</b><i>shape · distortion</i></h2>
+      <div class="body">
+        <div class="chips" id="modeChips"></div>
+        <div class="row"><label>spread</label><input type="range" id="spread" min="0.15" max="3" step="0.01" value="0.62"><output></output></div>
+        <div class="row"><label>focus</label><input type="range" id="falloff" min="0.5" max="20" step="0.1" value="7"><output></output></div>
+        <div class="row"><label>warp</label><input type="range" id="warpAmt" min="0" max="1.2" step="0.01" value="0.22"><output></output></div>
+        <div class="row adv"><label>angle</label><input type="range" id="angle" min="0" max="360" step="1" value="0"><output></output></div>
+        <div class="row adv"><label>waves</label><input type="range" id="waveAmp" min="0" max="0.5" step="0.005" value="0"><output></output></div>
+        <div class="row adv"><label>wave count</label><input type="range" id="waveFreq" min="0.5" max="14" step="0.1" value="3"><output></output></div>
+        <div class="row adv"><label>warp scale</label><input type="range" id="warpScale" min="0.2" max="7" step="0.05" value="1.6"><output></output></div>
+        <div class="row adv"><label>warp detail</label><input type="range" id="warpDetail" min="1" max="5" step="1" value="3"><output></output></div>
+        <div class="row adv"><label>warp drift</label><input type="range" id="warpDrift" min="0" max="2" step="0.01" value="0.45"><output></output></div>
+      </div>
+    </section>
+
+    <section id="s-finish">
+      <h2><b>finish</b><i>grain · motion</i></h2>
+      <div class="body">
+        <div class="row"><label>grain</label><input type="range" id="grain" min="0" max="0.5" step="0.005" value="0.1"><output></output></div>
+        <div class="row"><label>drift</label><input type="range" id="animAmp" min="0" max="0.5" step="0.005" value="0.1"><output></output></div>
+        <div class="row"><label>loop</label><input type="range" id="animDur" min="2" max="30" step="0.5" value="8"><output></output></div>
+        <div class="row adv"><label>grain size</label><input type="range" id="grainSize" min="1" max="8" step="0.5" value="1"><output></output></div>
+        <div class="row adv"><label>midtones</label><input type="range" id="grainMid" min="0" max="1" step="0.01" value="0.55"><output></output></div>
+        <div class="row adv"><label>grain moves</label><input type="range" id="grainAnim" min="0" max="1" step="1" value="1"><output></output></div>
+        <div class="row adv"><label>vignette</label><input type="range" id="vignette" min="0" max="1" step="0.01" value="0.12"><output></output></div>
+        <div class="row adv"><label>contrast</label><input type="range" id="contrast" min="0.5" max="2" step="0.01" value="1"><output></output></div>
+        <div class="row adv"><label>brightness</label><input type="range" id="brightness" min="-0.4" max="0.4" step="0.005" value="0"><output></output></div>
+        <div class="row adv"><label>saturation</label><input type="range" id="saturation" min="0" max="2" step="0.01" value="1"><output></output></div>
+        <div class="row adv"><label>posterise</label><input type="range" id="posterize" min="0" max="24" step="1" value="0"><output></output></div>
+        <div class="row adv"><label>breathing</label><input type="range" id="animBreath" min="0" max="1" step="0.01" value="0.25"><output></output></div>
+        <div class="row adv"><label>rotation</label><input type="range" id="animSpin" min="-2" max="2" step="0.05" value="0"><output></output></div>
+        <p class="note">the loop closes exactly — no visible cut</p>
+      </div>
+    </section>
+
+    <section id="s-export">
+      <h2><b>export</b><i>format · files</i></h2>
+      <div class="body">
+        <div class="chips" id="fmtChips"></div>
+        <div class="grid3">
+          <input type="number" id="fw" min="16" max="8000" step="1" value="1080">
+          <input type="number" id="fh" min="16" max="8000" step="1" value="1350">
+          <button class="btn" id="bSwap">swap</button>
+        </div>
+        <div class="row adv"><label>corners</label><input type="range" id="radius" min="0" max="80" step="1" value="0"><output></output></div>
+        <div class="row adv"><label>scale</label><input type="range" id="exScale" min="1" max="4" step="1" value="1"><output></output></div>
+        <div class="grid3">
+          <button class="btn pri" id="bPng">png</button>
+          <button class="btn" id="bJpg">jpg</button>
+          <button class="btn" id="bWebp">webp</button>
+        </div>
+        <div class="grid2">
+          <button class="btn pri" id="bVideo">record video</button>
+          <select id="vFmt"></select>
+        </div>
+        <div class="row adv"><label>fps</label><input type="range" id="vFps" min="12" max="60" step="1" value="30"><output></output></div>
+        <div class="row adv"><label>mbit/s</label><input type="range" id="vBits" min="2" max="40" step="1" value="14"><output></output></div>
+        <p class="note" id="fmtNote"></p>
+        <div class="grid3 adv">
+          <button class="btn" id="bCss">css</button>
+          <button class="btn" id="bSvg">svg</button>
+          <button class="btn" id="bJson">json</button>
+        </div>
+        <textarea id="out" class="adv" readonly placeholder="css / svg / json appears here"></textarea>
+        <div class="grid2 adv">
+          <button class="btn" id="bCopy">copy</button>
+          <button class="btn" id="bDlOut">download</button>
+        </div>
+        <div class="grid2 adv">
+          <button class="btn" id="bSaveFile">save .json</button>
+          <button class="btn" id="bLoadFile">load .json</button>
+        </div>
+        <button class="btn adv" id="bReset">reset everything</button>
+        <p class="note adv">keys: space play · r random · e png · 1–8 palette</p>
+      </div>
+    </section>
+
+    <div class="foot">
+      <a href="https://flohack.com" target="_blank" rel="noopener">flohack.com</a>
+      <a href="https://github.com/Flow-Ryan-Hack" target="_blank" rel="noopener">github</a>
+      <a href="#" id="backIntro">showcase</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="rec"><div id="recTxt">Recording …</div><div class="bar"><i id="recBar"></i></div><button class="btn" id="recStop">Cancel</button></div>
+<input type="file" id="fileIn" accept="application/json" style="display:none">
+
+<script>
+(() => {
+'use strict';
+
+/* Two entry points share this file:
+   index.html  → editor, straight in
+   slider.html → showcase only
+   The only difference is this flag, rewritten per file. */
+const SHOWCASE_MODE = true;
+const HANDOFF = 'gradientlab.handoff';
+
+/* ══════════════════════════════════════════════════════════════
+   Colour: sRGB ↔ OKLab
+   ══════════════════════════════════════════════════════════════ */
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const TAU = Math.PI*2;
+
+function hex2rgb(h){
+  h = h.replace('#','').trim();
+  if (h.length === 3) h = h.split('').map(c=>c+c).join('');
+  if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return null;
+  return [parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255];
+}
+function rgb2hex(c){
+  return '#' + c.map(v => clamp(Math.round(v*255),0,255).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+const s2l = v => v <= 0.04045 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+const l2s = v => v <= 0.0031308 ? v*12.92 : 1.055*Math.pow(v, 1/2.4) - 0.055;
+const cbrt = v => Math.sign(v)*Math.pow(Math.abs(v), 1/3);
+
+function hex2oklab(hex){
+  const c = hex2rgb(hex) || [0,0,0];
+  const r = s2l(c[0]), g = s2l(c[1]), b = s2l(c[2]);
+  const l = cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b);
+  const m = cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b);
+  const s = cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
+  return [
+    0.2104542553*l + 0.7936177850*m - 0.0040720468*s,
+    1.9779984951*l - 2.4285922050*m + 0.4505937099*s,
+    0.0259040371*l + 0.7827717662*m - 0.8086757660*s
+  ];
+}
+function oklab2hex(L){
+  const l_ = L[0] + 0.3963377774*L[1] + 0.2158037573*L[2];
+  const m_ = L[0] - 0.1055613458*L[1] - 0.0638541728*L[2];
+  const s_ = L[0] - 0.0894841775*L[1] - 1.2914855480*L[2];
+  const l = l_**3, m = m_**3, s = s_**3;
+  return rgb2hex([
+    l2s(clamp( 4.0767416621*l - 3.3077115913*m + 0.2309699292*s, 0, 1)),
+    l2s(clamp(-1.2684380046*l + 2.6097574011*m - 0.3413193965*s, 0, 1)),
+    l2s(clamp(-0.0041960863*l - 0.7034186147*m + 1.7076147010*s, 0, 1))
+  ]);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Presets
+   ══════════════════════════════════════════════════════════════ */
+const PALETTES = [
+  {n:'flohack',      bg:'#0B0818', c:['#F3EEE8','#B2F332','#6787AF','#19123D','#BADDCF']},
+  {n:'accilium',     bg:'#04161D', c:['#54DBC0','#00677F','#249C97','#073C4E','#990F4F']},
+  {n:'horizon',      bg:'#000000', c:['#FFFFFF','#BFD4DD','#123240','#000508']},
+  {n:'fog & almond', bg:'#000000', c:['#FFFFFF','#D8C9A8','#2A3A38','#0A0A0A']},
+  {n:'matcha roast', bg:'#0B1412', c:['#D6BD98','#677D6A','#40534C','#1A3636']},
+  {n:'crimson sand', bg:'#161616', c:['#710014','#B38F6F','#F2F1ED','#3A1418']},
+  {n:'cobalt ink',   bg:'#050A18', c:['#1B3FD8','#00D4FF','#F5F7FF','#0A1230']},
+  {n:'paper',        bg:'#F4F2ED', c:['#E8E2D6','#CFC7B8','#FFFFFF','#B8AE9C']}
+];
+
+/* ══════════════════════════════════════════════════════════════
+   Looks — complete setups. Format, corners and aspect ratio are left
+   untouched on purpose, so a look fits any canvas size.
+   ══════════════════════════════════════════════════════════════ */
+const LOOKS = [
+{n:'Horizon', d:'Light edge below, deep black above',
+ s:{mode:0, base:'#000000', baseW:0.22, spread:1.0, falloff:4.0, angle:0,
+    waveAmp:0, waveFreq:3, warpAmt:0.05, warpScale:1.2, warpDetail:2, warpDrift:0.3,
+    grain:0.055, grainSize:1, grainMid:0.5, vignette:0.05, contrast:1.05,
+    brightness:0, saturation:1, posterize:0,
+    animAmp:0.015, animBreath:0.10, animSpin:0, animDur:14,
+    stops:[
+      {hex:'#FFFFFF', x:0.50, y:1.28, r:1.25, st:1.6, ang:0, fall:0.42, amp:2.40},
+      {hex:'#EAF3F7', x:0.50, y:0.82, r:0.20, st:5.0, ang:0, fall:1.40, amp:1.45},
+      {hex:'#123240', x:0.32, y:0.58, r:0.50, st:2.0, ang:0, fall:0.90, amp:1.00},
+      {hex:'#000508', x:0.55, y:0.10, r:0.85, st:2.2, ang:0, fall:0.70, amp:1.50}]}},
+
+{n:'Fog Bank', d:'Soft diagonal, warm haze, heavy grain',
+ s:{mode:0, base:'#050505', baseW:0.85, spread:1.0, falloff:3.2, angle:0,
+    waveAmp:0, waveFreq:3, warpAmt:0.14, warpScale:1.1, warpDetail:3, warpDrift:0.35,
+    grain:0.15, grainSize:1, grainMid:0.6, vignette:0.10, contrast:1.02,
+    brightness:0, saturation:0.95, posterize:0,
+    animAmp:0.03, animBreath:0.18, animSpin:0, animDur:16,
+    stops:[
+      {hex:'#F6F5F1', x:0.16, y:0.94, r:0.88, st:2.6, ang:35, fall:0.65, amp:1.30},
+      {hex:'#D8C4A0', x:0.94, y:0.04, r:0.52, st:1.7, ang:-25, fall:0.95, amp:1.10},
+      {hex:'#2E3A36', x:0.58, y:0.60, r:0.55, st:2.1, ang:35, fall:1.00, amp:0.80}]}},
+
+{n:'Aurora', d:'Flowing bands over night blue',
+ s:{mode:0, base:'#04070E', baseW:0.75, spread:1.0, falloff:2.6, angle:0,
+    waveAmp:0, waveFreq:3, warpAmt:0.20, warpScale:0.9, warpDetail:3, warpDrift:0.5,
+    grain:0.07, grainSize:1, grainMid:0.55, vignette:0.25, contrast:1.06,
+    brightness:0, saturation:1.15, posterize:0,
+    animAmp:0.04, animBreath:0.30, animSpin:0, animDur:14,
+    stops:[
+      {hex:'#7DF9C4', x:0.40, y:0.30, r:0.42, st:3.0, ang:12, fall:0.90, amp:1.15},
+      {hex:'#3B6FE0', x:0.62, y:0.48, r:0.45, st:2.6, ang:-8, fall:0.90, amp:1.05},
+      {hex:'#B58BFF', x:0.48, y:0.16, r:0.32, st:3.2, ang:6,  fall:1.10, amp:0.90},
+      {hex:'#071427', x:0.50, y:0.86, r:0.75, st:2.0, ang:0,  fall:0.70, amp:1.30}]}},
+
+{n:'Sunrise', d:'Warm layers, soft transition',
+ s:{mode:1, base:'#1A0E12', baseW:0.55, spread:1.15, falloff:2.6, angle:90,
+    waveAmp:0, waveFreq:3, warpAmt:0.10, warpScale:1.0, warpDetail:2, warpDrift:0.3,
+    grain:0.06, grainSize:1, grainMid:0.5, vignette:0.14, contrast:1.03,
+    brightness:0, saturation:1.08, posterize:0,
+    animAmp:0.02, animBreath:0.15, animSpin:0, animDur:16,
+    stops:[
+      {hex:'#FFD9A0', x:0.50, y:0.92, r:0.55, st:1, ang:0, fall:0.85, amp:1.20},
+      {hex:'#E8724C', x:0.50, y:0.62, r:0.48, st:1, ang:0, fall:1.00, amp:1.05},
+      {hex:'#8E3A5C', x:0.50, y:0.36, r:0.50, st:1, ang:0, fall:1.00, amp:0.95},
+      {hex:'#241026', x:0.50, y:0.06, r:0.55, st:1, ang:0, fall:0.90, amp:1.00}]}},
+
+{n:'Paper', d:'Almost white — for light layouts',
+ s:{mode:0, base:'#F5F3EE', baseW:1.3, spread:1.2, falloff:2.0, angle:0,
+    waveAmp:0, waveFreq:3, warpAmt:0.08, warpScale:0.9, warpDetail:2, warpDrift:0.25,
+    grain:0.05, grainSize:1, grainMid:0.35, vignette:0.10, contrast:1.0,
+    brightness:0, saturation:0.9, posterize:0,
+    animAmp:0.02, animBreath:0.12, animSpin:0, animDur:20,
+    stops:[
+      {hex:'#FFFFFF', x:0.30, y:0.24, r:0.60, st:1.5, ang:20, fall:0.70, amp:1.10},
+      {hex:'#E6E1D6', x:0.78, y:0.72, r:0.55, st:1.8, ang:-15, fall:0.80, amp:0.85},
+      {hex:'#D8D2C4', x:0.10, y:0.94, r:0.45, st:2.2, ang:10, fall:0.90, amp:0.70}]}},
+
+{n:'Spotlight', d:'A single cone in the dark',
+ s:{mode:0, base:'#080809', baseW:1.0, spread:0.85, falloff:5.0, angle:0,
+    waveAmp:0, waveFreq:3, warpAmt:0.06, warpScale:1.2, warpDetail:2, warpDrift:0.3,
+    grain:0.09, grainSize:1, grainMid:0.65, vignette:0.38, contrast:1.10,
+    brightness:0, saturation:1, posterize:0,
+    animAmp:0.02, animBreath:0.20, animSpin:0, animDur:12,
+    stops:[
+      {hex:'#FFFFFF', x:0.50, y:0.38, r:0.40, st:1.15, ang:0, fall:1.20, amp:1.60},
+      {hex:'#8A90A0', x:0.50, y:0.46, r:0.75, st:1.30, ang:0, fall:0.60, amp:0.55}]}}
+];
+
+const FORMATS = [
+  {n:'1:1',        w:1080, h:1080},
+  {n:'4:5 Post',   w:1080, h:1350},
+  {n:'9:16 Story', w:1080, h:1920},
+  {n:'16:9 HD',    w:1920, h:1080},
+  {n:'3:2',        w:1620, h:1080},
+  {n:'21:9',       w:2520, h:1080},
+  {n:'A4 landscape', w:2480, h:1754},
+  {n:'Desktop 4K', w:3840, h:2160},
+  {n:'Twitter',    w:1600, h:900},
+  {n:'Card',       w:1200, h:630}
+];
+
+const MODES = ['Mesh','Linear','Radial','Conic','Waves','Spiral'];
+
+/* ══════════════════════════════════════════════════════════════
+   Showcase — the intro slider. Fresh palettes, each with the point
+   geometry that makes them work. Colour comes from `colours`, so the
+   swatches and the gradient can never drift apart.
+   ══════════════════════════════════════════════════════════════ */
+const SHOWCASE = [
+{name:'flohack', base:'#0B0818', baseW:0.40,
+ colours:[{n:'chalk',hex:'#F3EEE8'},{n:'acid',hex:'#B2F332'},{n:'steel',hex:'#6787AF'},{n:'ink',hex:'#19123D'}],
+ s:{mode:0, spread:1.0, falloff:3.0, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.15, warpScale:1.05, warpDetail:3, warpDrift:0.42,
+    grain:0.09, grainSize:1, grainMid:0.55, vignette:0.10, contrast:1.04,
+    brightness:0, saturation:1.06, posterize:0,
+    animAmp:0.028, animBreath:0.20, animSpin:0, animDur:15},
+ geom:[{x:0.28,y:1.00,r:0.78,st:2.2,ang:20, fall:0.55,amp:1.90},
+       {x:0.80,y:0.74,r:0.24,st:3.2,ang:-12,fall:1.20,amp:1.15},
+       {x:0.30,y:0.44,r:0.48,st:2.2,ang:10, fall:0.90,amp:1.00},
+       {x:0.70,y:0.04,r:0.70,st:2.4,ang:0,  fall:0.75,amp:1.40}]},
+
+{name:'accilium', base:'#04161D', baseW:0.55,
+ colours:[{n:'mint',hex:'#54DBC0'},{n:'petrol',hex:'#00677F'},{n:'berry',hex:'#990F4F'},{n:'deep',hex:'#073C4E'}],
+ s:{mode:0, spread:1.0, falloff:3.1, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.20, warpScale:1.0, warpDetail:3, warpDrift:0.48,
+    grain:0.08, grainSize:1, grainMid:0.55, vignette:0.18, contrast:1.05,
+    brightness:0, saturation:1.05, posterize:0,
+    animAmp:0.034, animBreath:0.26, animSpin:0, animDur:14},
+ geom:[{x:0.48,y:0.04,r:0.44,st:2.6,ang:0,  fall:0.95,amp:1.35},
+       {x:0.32,y:0.44,r:0.52,st:2.2,ang:12, fall:0.88,amp:1.18},
+       {x:0.86,y:0.70,r:0.32,st:1.8,ang:-20,fall:1.05,amp:0.82},
+       {x:0.30,y:0.96,r:0.62,st:2.2,ang:0,  fall:0.80,amp:1.10}]},
+
+{name:'Ceramic', base:'#141110', baseW:0.55,
+ colours:[{n:'Bone',hex:'#F4EFE6'},{n:'Clay',hex:'#C96F4A'},{n:'Moss',hex:'#8A9A5B'},{n:'Espresso',hex:'#2E2A26'}],
+ s:{mode:0, spread:1.0, falloff:3.0, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.16, warpScale:1.1, warpDetail:3, warpDrift:0.40,
+    grain:0.12, grainSize:1, grainMid:0.60, vignette:0.12, contrast:1.03,
+    brightness:0, saturation:1.02, posterize:0,
+    animAmp:0.030, animBreath:0.20, animSpin:0, animDur:15},
+ geom:[{x:0.16,y:0.92,r:0.82,st:2.4,ang:32, fall:0.62,amp:1.40},
+       {x:0.88,y:0.12,r:0.52,st:1.7,ang:-24,fall:0.95,amp:1.20},
+       {x:0.54,y:0.52,r:0.40,st:2.1,ang:18, fall:1.05,amp:0.75},
+       {x:0.08,y:0.24,r:0.58,st:1.8,ang:0,  fall:0.90,amp:1.00}]},
+
+{name:'Signal', base:'#000000', baseW:0.24,
+ colours:[{n:'Chalk',hex:'#E8E4DC'},{n:'Signal',hex:'#FF3B1F'},{n:'Slate',hex:'#4A5560'},{n:'Carbon',hex:'#0B0B0C'}],
+ s:{mode:0, spread:1.0, falloff:4.0, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.05, warpScale:1.2, warpDetail:2, warpDrift:0.30,
+    grain:0.07, grainSize:1, grainMid:0.50, vignette:0.06, contrast:1.05,
+    brightness:0, saturation:1.05, posterize:0,
+    animAmp:0.015, animBreath:0.12, animSpin:0, animDur:16},
+ geom:[{x:0.50,y:1.02,r:0.80,st:2.0,ang:0,fall:0.50,amp:2.20},
+       {x:0.50,y:0.70,r:0.14,st:4.5,ang:0,fall:1.60,amp:1.70},
+       {x:0.26,y:0.44,r:0.46,st:2.2,ang:0,fall:0.95,amp:1.00},
+       {x:0.60,y:0.02,r:0.72,st:2.4,ang:0,fall:0.75,amp:1.50}]},
+
+{name:'Tidal', base:'#02141B', baseW:0.60,
+ colours:[{n:'Sand Dollar',hex:'#F2E8CF'},{n:'Tidal',hex:'#0E7C7B'},{n:'Rust',hex:'#A44A3F'},{n:'Abyss',hex:'#04202B'}],
+ s:{mode:0, spread:1.0, falloff:3.2, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.22, warpScale:1.0, warpDetail:3, warpDrift:0.50,
+    grain:0.08, grainSize:1, grainMid:0.55, vignette:0.22, contrast:1.06,
+    brightness:0, saturation:1.08, posterize:0,
+    animAmp:0.040, animBreath:0.28, animSpin:0, animDur:13},
+ geom:[{x:0.50,y:0.02,r:0.46,st:2.6,ang:0,  fall:0.95,amp:1.30},
+       {x:0.36,y:0.42,r:0.52,st:2.2,ang:14, fall:0.88,amp:1.15},
+       {x:0.80,y:0.72,r:0.40,st:1.8,ang:-18,fall:1.00,amp:0.90},
+       {x:0.30,y:0.94,r:0.62,st:2.0,ang:0,  fall:0.80,amp:1.05}]},
+
+{name:'Neon Dusk', base:'#0A0618', baseW:0.42,
+ colours:[{n:'Ice',hex:'#E6F1FF'},{n:'Ultra',hex:'#6C4BFF'},{n:'Bloom',hex:'#FF5CA8'},{n:'Indigo',hex:'#120C2E'}],
+ s:{mode:0, spread:1.0, falloff:2.6, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.20, warpScale:1.0, warpDetail:3, warpDrift:0.55,
+    grain:0.07, grainSize:1, grainMid:0.55, vignette:0.20, contrast:1.05,
+    brightness:0, saturation:1.12, posterize:0,
+    animAmp:0.035, animBreath:0.26, animSpin:0, animDur:12},
+ geom:[{x:0.72,y:0.18,r:0.42,st:2.8,ang:26, fall:0.90,amp:1.05},
+       {x:0.28,y:0.40,r:0.50,st:2.8,ang:-16,fall:0.85,amp:1.15},
+       {x:0.62,y:0.74,r:0.48,st:3.0,ang:22, fall:0.85,amp:1.10},
+       {x:0.14,y:0.94,r:0.58,st:2.4,ang:-8, fall:0.80,amp:1.00}]},
+
+{name:'Kiln', base:'#140C09', baseW:0.45,
+ colours:[{n:'Amber',hex:'#F5C77E'},{n:'Ember',hex:'#E2703A'},{n:'Verdigris',hex:'#6B8F71'},{n:'Char',hex:'#1C1210'}],
+ s:{mode:0, spread:1.05, falloff:2.8, angle:0, waveAmp:0, waveFreq:3,
+    warpAmt:0.14, warpScale:1.1, warpDetail:3, warpDrift:0.42,
+    grain:0.10, grainSize:1, grainMid:0.58, vignette:0.16, contrast:1.04,
+    brightness:0, saturation:1.06, posterize:0,
+    animAmp:0.028, animBreath:0.22, animSpin:0, animDur:14},
+ geom:[{x:0.50,y:0.96,r:0.70,st:2.6,ang:0,  fall:0.62,amp:1.35},
+       {x:0.42,y:0.66,r:0.46,st:2.2,ang:8,  fall:0.95,amp:1.10},
+       {x:0.84,y:0.30,r:0.38,st:1.8,ang:-20,fall:1.05,amp:0.80},
+       {x:0.16,y:0.14,r:0.60,st:2.0,ang:12, fall:0.85,amp:1.05}]}
+];
+
+const MAXP = 8;
+
+/* One colour point. r = reach, st = stretch (ellipse), ang = its angle,
+   fall = edge sharpness relative to the global focus, amp = strength. */
+const STOP_DEF = {hex:'#FFFFFF', x:0.5, y:0.5, r:0.55, st:1, ang:0, fall:1, amp:1};
+const mkStop = o => Object.assign({}, STOP_DEF, o);
+
+const DEFAULT = () => ({
+  w:1080, h:1350, radius:0,
+  mode:0, angle:0, spread:0.62, falloff:7,
+  waveAmp:0, waveFreq:3,
+  base:'#0B1412', baseW:0.9,
+  stops:[
+    mkStop({hex:'#D6BD98', x:0.80, y:0.10, r:0.62}),
+    mkStop({hex:'#677D6A', x:0.18, y:0.40, r:0.50}),
+    mkStop({hex:'#40534C', x:0.70, y:0.70, r:0.62}),
+    mkStop({hex:'#1A3636', x:0.16, y:0.94, r:0.50})
+  ],
+  warpAmt:0.22, warpScale:1.6, warpDetail:3, warpDrift:0.45,
+  grain:0.10, grainSize:1, grainMid:0.55, grainAnim:1,
+  vignette:0.12, contrast:1, brightness:0, saturation:1, posterize:0,
+  animAmp:0.10, animBreath:0.25, animSpin:0, animDur:8,
+  seed:1337
+});
+
+/* Fills in missing fields — older project files and localStorage presets
+   predate the per-point parameters. */
+function normalize(st){
+  const d = DEFAULT();
+  st = Object.assign(d, st);
+  st.stops = (Array.isArray(st.stops) && st.stops.length ? st.stops : d.stops)
+    .slice(0, MAXP).map(mkStop);
+  return st;
+}
+
+let S = DEFAULT();
+let playing = true, showHandles = true, fitFull = false;
+let t0 = performance.now(), phase = 0;
+
+/* ══════════════════════════════════════════════════════════════
+   WebGL
+   ══════════════════════════════════════════════════════════════ */
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl2', {preserveDrawingBuffer:true, antialias:false, alpha:false, premultipliedAlpha:false})
+        || cv.getContext('webgl',  {preserveDrawingBuffer:true, antialias:false, alpha:false, premultipliedAlpha:false});
+
+if (!gl){
+  document.getElementById('app').innerHTML =
+    '<div id="err"><h2>WebGL unavailable</h2><p>This browser does not provide WebGL. Enable it under Develop in Safari, or use Chrome or Firefox.</p></div>';
+  return;
+}
+
+const VS = `
+attribute vec2 a;
+void main(){ gl_Position = vec4(a, 0.0, 1.0); }`;
+
+const FS = `
+precision highp float;
+#define MAXP 8
+#define TAU 6.28318530718
+
+uniform vec2  uRes;
+uniform float uPx;
+uniform float uAspect;
+uniform int   uCount;
+uniform vec3  uCol[MAXP];
+uniform vec4  uPA[MAXP];   /* xy position · z reach   · w stretch    */
+uniform vec4  uPB[MAXP];   /* x angle     · y edge    · z strength   */
+uniform vec3  uBase;
+uniform float uBaseW;
+uniform int   uMode;
+uniform float uAngle;
+uniform float uSpread;
+uniform float uFalloff;
+uniform float uWaveAmp, uWaveFreq;
+uniform float uWarpAmt, uWarpScale, uWarpDrift;
+uniform int   uWarpDetail;
+uniform float uGrain, uGrainSize, uGrainMid, uGrainSeed;
+uniform float uVignette, uContrast, uBright, uSat, uPoster;
+uniform float uPhase;
+uniform float uSeed;
+
+/* --- Hash & simplex noise --------------------------------- */
+/* Dave Hoskins' hash — keeps intermediates small so large pixel
+   coordinates don't produce precision artefacts (visible streaks). */
+float hash21(vec2 p){
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+vec2 hash22(vec2 p){
+  vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.xx + p3.yz) * p3.zy);
+}
+vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+vec2 mod289(vec2 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+vec3 permute(vec3 x){ return mod289(((x*34.0)+1.0)*x); }
+float snoise(vec2 v){
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i  = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod289(i);
+  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+  m = m*m; m = m*m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+  vec3 g;
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+float fbm(vec2 p){
+  float s = 0.0, a = 0.5, tot = 0.0;
+  for (int i = 0; i < 5; i++){
+    if (i >= uWarpDetail) break;
+    s += a * snoise(p);
+    tot += a;
+    p *= 2.03; p += 7.31;
+    a *= 0.5;
+  }
+  return s / max(tot, 0.0001);
+}
+
+/* --- OKLab → sRGB ----------------------------------------- */
+vec3 oklab2srgb(vec3 c){
+  float l_ = c.x + 0.3963377774*c.y + 0.2158037573*c.z;
+  float m_ = c.x - 0.1055613458*c.y - 0.0638541728*c.z;
+  float s_ = c.x - 0.0894841775*c.y - 1.2914855480*c.z;
+  vec3 lms = vec3(l_*l_*l_, m_*m_*m_, s_*s_*s_);
+  vec3 lin = vec3(
+     4.0767416621*lms.x - 3.3077115913*lms.y + 0.2309699292*lms.z,
+    -1.2684380046*lms.x + 2.6097574011*lms.y - 0.3413193965*lms.z,
+    -0.0041960863*lms.x - 0.7034186147*lms.y + 1.7076147010*lms.z);
+  lin = clamp(lin, 0.0, 1.0);
+  return mix(lin*12.92, 1.055*pow(lin, vec3(1.0/2.4)) - 0.055, step(0.0031308, lin));
+}
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes;
+  uv.y = 1.0 - uv.y;
+  vec2 p = vec2(uv.x * uAspect, uv.y);
+  vec2 ctr = vec2(0.5 * uAspect, 0.5);
+
+  /* Domain warp — time travels a closed circle, so it loops */
+  if (uWarpAmt > 0.0005){
+    vec2 drift = uWarpDrift * vec2(cos(TAU*uPhase), sin(TAU*uPhase));
+    vec2 q = p * uWarpScale + drift + uSeed;
+    vec2 w = vec2(fbm(q), fbm(q + vec2(37.2, 11.7)));
+    p += uWarpAmt * w * 0.5;
+  }
+
+  float ca = cos(uAngle), sa = sin(uAngle);
+  vec2 dir = vec2(ca, sa);
+  vec2 rel = p - ctr;
+
+  /* 1D parameter for the non-mesh modes */
+  float s = 0.0;
+  bool oneD = (uMode != 0);
+  bool wrap = (uMode == 3 || uMode == 5);
+  if (uMode == 1){
+    s = dot(rel, dir) / max(uAspect, 1.0) + 0.5;
+    if (uWaveAmp > 0.0) s += uWaveAmp * sin(dot(rel, vec2(-sa, ca)) * uWaveFreq * TAU);
+  } else if (uMode == 2){
+    s = length(rel) / (0.5 * length(vec2(uAspect, 1.0)));
+    if (uWaveAmp > 0.0) s += uWaveAmp * sin(atan(rel.y, rel.x) * floor(uWaveFreq) + uAngle);
+  } else if (uMode == 3){
+    s = fract(atan(rel.y, rel.x) / TAU - uAngle / TAU + 1.0);
+    if (uWaveAmp > 0.0) s += uWaveAmp * sin(length(rel) * uWaveFreq * TAU);
+  } else if (uMode == 4){
+    s = dot(rel, dir) / max(uAspect, 1.0) + 0.5;
+    s += uWaveAmp * sin(dot(rel, vec2(-sa, ca)) * uWaveFreq * TAU + uPhase * TAU)
+       * (0.5 + 0.5 * sin(dot(rel, dir) * uWaveFreq * 1.7));
+  } else if (uMode == 5){
+    float ang = atan(rel.y, rel.x) / TAU - uAngle / TAU;
+    s = fract(ang + length(rel) * uWaveFreq + 1.0);
+  }
+
+  vec3 acc = uBase * (uBaseW + 0.0008);
+  float wsum = uBaseW + 0.0008;
+
+  for (int i = 0; i < MAXP; i++){
+    if (i >= uCount) break;
+    vec4 A = uPA[i];
+    vec4 B = uPB[i];
+    float r = max(A.z * uSpread, 0.012);
+    float d;
+    if (oneD){
+      vec2 pr = A.xy - vec2(0.5, 0.5);
+      float si;
+      if (uMode == 2)      si = length(vec2(pr.x * uAspect, pr.y)) / (0.5 * length(vec2(uAspect, 1.0)));
+      else if (wrap)       si = fract(atan(pr.y, pr.x * uAspect) / TAU - uAngle / TAU + 1.0);
+      else                 si = dot(vec2(pr.x * uAspect, pr.y), dir) / max(uAspect, 1.0) + 0.5;
+      d = abs(s - si);
+      if (wrap) d = min(d, 1.0 - d);
+      r *= 0.55;
+    } else {
+      /* Ellipse: rotate into the point's own frame, then stretch.
+         x/st and y*st keep the area constant — only the shape changes. */
+      vec2 dv = p - vec2(A.x * uAspect, A.y);
+      float pc = cos(B.x), ps = sin(B.x);
+      vec2 dr = vec2(dv.x * pc + dv.y * ps, -dv.x * ps + dv.y * pc);
+      float st = max(A.w, 0.05);
+      dr.x /= st; dr.y *= st;
+      d = length(dr);
+    }
+    float k = d / r;
+    float w = exp(-k * k * uFalloff * max(B.y, 0.05)) * max(B.z, 0.0);
+    acc  += uCol[i] * w;
+    wsum += w;
+  }
+
+  vec3 lab = acc / wsum;
+  vec3 col = oklab2srgb(lab);
+
+  /* Look */
+  if (abs(uSat - 1.0) > 0.001){
+    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col = clamp(mix(vec3(lum), col, uSat), 0.0, 1.0);
+  }
+  col = clamp((col - 0.5) * uContrast + 0.5 + uBright, 0.0, 1.0);
+
+  if (uVignette > 0.001){
+    vec2 vq = (uv - 0.5) * vec2(uAspect, 1.0) * 1.35;
+    float v = 1.0 - uVignette * dot(vq, vq);
+    col *= clamp(v, 0.0, 1.0);
+  }
+
+  if (uPoster >= 2.0){
+    col = floor(col * uPoster + 0.5) / uPoster;
+  }
+
+  /* Grain — cell never below one render pixel, otherwise moiré */
+  if (uGrain > 0.0005){
+    float cell = max(floor(uGrainSize * uPx + 0.5), 1.0);
+    vec2 gp = floor(gl_FragCoord.xy / cell);
+    vec2 nn = hash22(gp + uGrainSeed);
+    float g = (nn.x + nn.y) * 0.5 - 0.5;
+    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    float mask = mix(1.0, 4.0 * lum * (1.0 - lum) + 0.15, uGrainMid);
+    col += g * uGrain * 2.0 * mask;
+  }
+
+  /* Dither against banding (triangular, 1 LSB) */
+  vec2 dd = hash22(gl_FragCoord.xy + uSeed);
+  col += (dd.x + dd.y - 1.0) / 255.0;
+
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`;
+
+function compile(type, src){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(prog, 'a');
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+const U = {};
+['uRes','uPx','uAspect','uCount','uCol','uPA','uPB','uBase','uBaseW','uMode','uAngle','uSpread',
+ 'uFalloff','uWaveAmp','uWaveFreq','uWarpAmt','uWarpScale','uWarpDrift','uWarpDetail','uGrain',
+ 'uGrainSize','uGrainMid','uGrainSeed','uVignette','uContrast','uBright','uSat','uPoster','uPhase','uSeed']
+  .forEach(k => U[k] = gl.getUniformLocation(prog, k));
+
+/* ══════════════════════════════════════════════════════════════
+   Animated point positions (perfect loop)
+   ══════════════════════════════════════════════════════════════ */
+function rnd(seed){ // deterministisch
+  let s = seed | 0;
+  return () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 8) & 0xffffff) / 0xffffff; };
+}
+function motionFor(i){
+  const r = rnd(S.seed + i * 7919);
+  return {
+    fx: 1 + Math.floor(r() * 2),
+    fy: 1 + Math.floor(r() * 2),
+    px: r(), py: r(),
+    ax: 0.6 + r() * 0.8, ay: 0.6 + r() * 0.8,
+    fr: 1 + Math.floor(r() * 2), pr: r()
+  };
+}
+function animatedPoints(ph){
+  const spin = S.animSpin * ph * TAU;
+  const cs = Math.cos(spin), sn = Math.sin(spin);
+  return S.stops.map((st, i) => {
+    const m = motionFor(i);
+    let x = st.x, y = st.y;
+    if (S.animAmp > 0){
+      x += S.animAmp * m.ax * Math.sin(TAU * (m.fx * ph + m.px));
+      y += S.animAmp * m.ay * Math.cos(TAU * (m.fy * ph + m.py));
+    }
+    if (S.animSpin !== 0){
+      const dx = x - 0.5, dy = y - 0.5;
+      x = 0.5 + dx * cs - dy * sn;
+      y = 0.5 + dx * sn + dy * cs;
+    }
+    let r = st.r;
+    if (S.animBreath > 0) r *= 1 + S.animBreath * 0.5 * Math.sin(TAU * (m.fr * ph + m.pr));
+    return {x, y, r, st: st.st, ang: st.ang, fall: st.fall, amp: st.amp};
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Render
+   ══════════════════════════════════════════════════════════════ */
+let renderW = 0, renderH = 0;
+
+function sizeCanvas(w, h){
+  const changed = (cv.width !== w || cv.height !== h);
+  if (changed){ cv.width = w; cv.height = h; }
+  renderW = w; renderH = h;
+  gl.viewport(0, 0, w, h);
+  if (changed) hud();
+}
+function hud(){
+  const el = document.getElementById('hudTxt');
+  if (!el) return;
+  el.textContent = S.w + ' × ' + S.h + '  ·  ' + MODES[S.mode] +
+    '  ·  preview ' + renderW + ' × ' + renderH + ' px';
+}
+
+function draw(ph, pxScale){
+  const n = Math.min(S.stops.length, MAXP);
+  const pts = animatedPoints(ph);
+  const cols = new Float32Array(MAXP * 3);
+  const pa   = new Float32Array(MAXP * 4);
+  const pb   = new Float32Array(MAXP * 4);
+  for (let i = 0; i < n; i++){
+    const lab = hex2oklab(S.stops[i].hex), q = pts[i];
+    cols[i*3] = lab[0]; cols[i*3+1] = lab[1]; cols[i*3+2] = lab[2];
+    pa[i*4]   = q.x;  pa[i*4+1] = q.y;
+    pa[i*4+2] = Math.max(q.r, 0.02);
+    pa[i*4+3] = q.st;
+    pb[i*4]   = q.ang * Math.PI / 180;
+    pb[i*4+1] = q.fall;
+    pb[i*4+2] = q.amp;
+    pb[i*4+3] = 0;
+  }
+  const base = hex2oklab(S.base);
+
+  gl.uniform2f(U.uRes, renderW, renderH);
+  gl.uniform1f(U.uPx, pxScale);
+  gl.uniform1f(U.uAspect, S.w / S.h);
+  gl.uniform1i(U.uCount, n);
+  gl.uniform3fv(U.uCol, cols);
+  gl.uniform4fv(U.uPA, pa);
+  gl.uniform4fv(U.uPB, pb);
+  gl.uniform3f(U.uBase, base[0], base[1], base[2]);
+  gl.uniform1f(U.uBaseW, S.baseW);
+  gl.uniform1i(U.uMode, S.mode);
+  gl.uniform1f(U.uAngle, S.angle * Math.PI / 180);
+  gl.uniform1f(U.uSpread, S.spread);
+  gl.uniform1f(U.uFalloff, S.falloff);
+  gl.uniform1f(U.uWaveAmp, S.waveAmp);
+  gl.uniform1f(U.uWaveFreq, S.waveFreq);
+  gl.uniform1f(U.uWarpAmt, S.warpAmt);
+  gl.uniform1f(U.uWarpScale, S.warpScale);
+  gl.uniform1f(U.uWarpDrift, S.warpDrift);
+  gl.uniform1i(U.uWarpDetail, S.warpDetail);
+  gl.uniform1f(U.uGrain, S.grain);
+  gl.uniform1f(U.uGrainSize, S.grainSize);
+  gl.uniform1f(U.uGrainMid, S.grainMid);
+  gl.uniform1f(U.uGrainSeed, S.grainAnim ? (Math.floor(ph * 600) * 7.31) % 97 : 0);
+  gl.uniform1f(U.uVignette, S.vignette);
+  gl.uniform1f(U.uContrast, S.contrast);
+  gl.uniform1f(U.uBright, S.brightness);
+  gl.uniform1f(U.uSat, S.saturation);
+  gl.uniform1f(U.uPoster, S.posterize);
+  gl.uniform1f(U.uPhase, ph);
+  gl.uniform1f(U.uSeed, (S.seed % 997) * 0.0137);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* Render the preview at exact device resolution — otherwise the browser
+   rescales the grain and moiré appears. Capped for very large canvases. */
+const PREVIEW_CAP = 3200;
+function previewSize(){
+  if (introOpen) return [GW * 2, GH * 2];   // gradient fills the post block
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+  if (w < 8 || h < 8){ w = 320; h = Math.round(320 * S.h / S.w); }
+  const m = Math.max(w, h);
+  if (m > PREVIEW_CAP){ const k = PREVIEW_CAP / m; w = Math.round(w*k); h = Math.round(h*k); }
+  return [w, h];
+}
+
+let recording = false;
+function frame(now){
+  requestAnimationFrame(frame);
+  if (recording) return;                 // Aufnahme steuert selbst
+  if (playing) phase = (((now - t0) / 1000) / S.animDur) % 1;
+  const [w, h] = previewSize();
+  sizeCanvas(w, h);
+  draw(phase, h / S.h);
+  if (introOpen) drawPost();
+  else positionHandles();
+}
+requestAnimationFrame(frame);
+
+/* ══════════════════════════════════════════════════════════════
+   Preview frame layout
+   ══════════════════════════════════════════════════════════════ */
+const stage = document.getElementById('stage');
+const frameEl = document.getElementById('frame');
+const introEl = document.getElementById('intro');
+const shotEl = document.getElementById('shot');
+
+function layout(){
+  if (introOpen){ hud(); return; }
+  const pad = 64;
+  const aw = stage.clientWidth - pad, ah = stage.clientHeight - pad;
+  const ar = S.w / S.h;
+  let w, h;
+  if (fitFull && S.w <= aw && S.h <= ah){ w = S.w; h = S.h; }
+  else { w = aw; h = w / ar; if (h > ah){ h = ah; w = h * ar; } }
+  frameEl.style.width = Math.max(40, Math.round(w)) + 'px';
+  frameEl.style.height = Math.max(40, Math.round(h)) + 'px';
+  frameEl.style.borderRadius = (S.radius * (w / S.w)).toFixed(1) + 'px';
+  hud();
+}
+new ResizeObserver(layout).observe(stage);
+
+/* ══════════════════════════════════════════════════════════════
+   On-canvas handles
+   ══════════════════════════════════════════════════════════════ */
+const handlesEl = document.getElementById('handles');
+let dragIdx = -1;
+
+function buildHandles(){
+  handlesEl.innerHTML = '';
+  S.stops.forEach((st, i) => {
+    const d = document.createElement('div');
+    d.className = 'handle';
+    d.style.background = st.hex;
+    d.dataset.i = i;
+    d.title = 'Colour ' + (i+1) + ' — drag';
+    d.textContent = String(i+1);
+    handlesEl.appendChild(d);
+  });
+  positionHandles();
+}
+/* Keeps a point's X/Y sliders in sync with dragging on the canvas */
+function syncStopDetail(i){
+  const det = $('stops').children[i] && $('stops').children[i].querySelector('.detail');
+  if (!det) return;
+  const st = S.stops[i];
+  const inputs = det.querySelectorAll('input');
+  if (inputs[0]){ inputs[0].value = st.x; inputs[0].nextElementSibling.textContent = st.x.toFixed(3); }
+  if (inputs[1]){ inputs[1].value = st.y; inputs[1].nextElementSibling.textContent = st.y.toFixed(3); }
+}
+function positionHandles(){
+  const kids = handlesEl.children;
+  handlesEl.style.display = showHandles ? 'block' : 'none';
+  for (let i = 0; i < kids.length; i++){
+    const st = S.stops[i];
+    if (!st) continue;
+    kids[i].style.left = (st.x * 100) + '%';
+    kids[i].style.top  = (st.y * 100) + '%';
+    kids[i].style.background = st.hex;
+    const c = hex2rgb(st.hex) || [0,0,0];
+    const lum = 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+    kids[i].style.color = lum > 0.55 ? 'rgba(0,0,0,.7)' : 'rgba(255,255,255,.85)';
+  }
+}
+handlesEl.addEventListener('pointerdown', e => {
+  const h = e.target.closest('.handle');
+  if (!h) return;
+  dragIdx = +h.dataset.i;
+  h.classList.add('drag');
+  h.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+handlesEl.addEventListener('pointermove', e => {
+  if (dragIdx < 0) return;
+  const r = frameEl.getBoundingClientRect();
+  S.stops[dragIdx].x = clamp((e.clientX - r.left) / r.width, -0.3, 1.3);
+  S.stops[dragIdx].y = clamp((e.clientY - r.top) / r.height, -0.3, 1.3);
+  positionHandles();
+  syncStopDetail(dragIdx);
+});
+const endDrag = () => {
+  if (dragIdx < 0) return;
+  const h = handlesEl.children[dragIdx];
+  if (h) h.classList.remove('drag');
+  dragIdx = -1;
+};
+handlesEl.addEventListener('pointerup', endDrag);
+handlesEl.addEventListener('pointercancel', endDrag);
+
+/* ══════════════════════════════════════════════════════════════
+   UI wiring
+   ══════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const toast = (msg) => {
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2000);
+};
+
+/* Collapsible sections */
+document.querySelectorAll('section > h2').forEach(h => {
+  h.addEventListener('click', () => h.parentElement.classList.toggle('closed'));
+});
+
+/* Sliders */
+const SLIDERS = [
+  ['baseW','baseW',2],['angle','angle',0],['spread','spread',2],['falloff','falloff',1],
+  ['waveAmp','waveAmp',3],['waveFreq','waveFreq',1],
+  ['warpAmt','warpAmt',2],['warpScale','warpScale',2],['warpDetail','warpDetail',0],['warpDrift','warpDrift',2],
+  ['grain','grain',3],['grainSize','grainSize',1],['grainMid','grainMid',2],['grainAnim','grainAnim',0],
+  ['vignette','vignette',2],['contrast','contrast',2],['brightness','brightness',3],
+  ['saturation','saturation',2],['posterize','posterize',0],
+  ['animAmp','animAmp',3],['animBreath','animBreath',2],['animSpin','animSpin',2],['animDur','animDur',1],
+  ['radius','radius',0]
+];
+SLIDERS.forEach(([id, key, dec]) => {
+  const el = $(id);
+  const out = el.parentElement.querySelector('output');
+  const upd = () => {
+    S[key] = parseFloat(el.value);
+    if (out) out.textContent = (dec === 0) ? String(Math.round(S[key])) : S[key].toFixed(dec);
+    if (id === 'radius') layout();
+  };
+  el.addEventListener('input', upd);
+  el._sync = () => { el.value = S[key]; upd(); };
+});
+
+/* Mode chips */
+const modeChips = $('modeChips');
+MODES.forEach((m, i) => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = m;
+  b.addEventListener('click', () => { S.mode = i; syncModeChips(); layout(); });
+  modeChips.appendChild(b);
+});
+function syncModeChips(){
+  [...modeChips.children].forEach((c, i) => c.classList.toggle('on', i === S.mode));
+}
+
+/* Format chips */
+const fmtChips = $('fmtChips');
+FORMATS.forEach(f => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = f.n;
+  b.addEventListener('click', () => { S.w = f.w; S.h = f.h; syncFormat(); layout(); });
+  fmtChips.appendChild(b);
+});
+function syncFormat(){
+  $('fw').value = S.w; $('fh').value = S.h;
+  [...fmtChips.children].forEach((c, i) =>
+    c.classList.toggle('on', FORMATS[i].w === S.w && FORMATS[i].h === S.h));
+  const px = S.w * S.h;
+  $('fmtNote').textContent = 'Aspect ' + (S.w/S.h).toFixed(3) +
+    ' · ' + (px/1e6).toFixed(1) + ' MP' + (Math.max(S.w,S.h) > PREVIEW_CAP ? ' · preview scaled down, export at full size' : '');
+}
+['fw','fh'].forEach(id => $(id).addEventListener('change', () => {
+  S.w = clamp(parseInt($('fw').value) || 1080, 16, 8000);
+  S.h = clamp(parseInt($('fh').value) || 1080, 16, 8000);
+  syncFormat(); layout();
+}));
+$('bSwap').addEventListener('click', () => { const t = S.w; S.w = S.h; S.h = t; syncFormat(); layout(); });
+
+/* Background colour */
+$('baseCol').addEventListener('input', e => { S.base = e.target.value.toUpperCase(); $('baseHex').textContent = S.base; });
+
+/* Colour stops */
+function buildStops(){
+  const box = $('stops');
+  box.innerHTML = '';
+  S.stops.forEach((st, i) => {
+    const wrap = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'stop';
+    row.innerHTML =
+      '<span class="num">' + (i+1) + '</span>' +
+      '<input type="color" value="' + st.hex + '">' +
+      '<input class="hex" type="text" value="' + st.hex + '" spellcheck="false">' +
+      '<input class="rad" type="range" min="0.05" max="1.6" step="0.01" value="' + st.r + '" title="Reach">' +
+      '<button class="more" title="Point detail">▾</button>' +
+      '<button class="x" title="Remove">×</button>';
+    const [, col, hex, rad, more, del] = row.children;
+
+    // Detail sliders: what sets this point apart from the others
+    const det = document.createElement('div');
+    det.className = 'detail';
+    const FIELDS = [
+      ['x',    'Position X', -0.3, 1.3, 0.005, 3, 'Horizontal — deliberately reaches past the canvas edge'],
+      ['y',    'Position Y', -0.3, 1.3, 0.005, 3, 'Vertical — points outside create edge falloffs'],
+      ['st',   'Stretch',   0.25, 4,   0.05, 2, 'Ellipse: wide or tall — 1 is round'],
+      ['ang',  'Rotation',  0,    180, 1,    0, 'Direction of the stretch, in degrees'],
+      ['fall', 'Edge',      0.3,  3,   0.05, 2, 'Low = far-reaching haze, high = clearly bounded'],
+      ['amp',  'Strength',  0,    2,   0.02, 2, 'How strongly this colour asserts itself']
+    ];
+    FIELDS.forEach(([key, label, mn, mx, sp, dec, tip]) => {
+      const l = document.createElement('label'); l.textContent = label; l.title = tip;
+      const r = document.createElement('input');
+      r.type = 'range'; r.min = mn; r.max = mx; r.step = sp; r.value = st[key]; r.title = tip;
+      const out = document.createElement('output');
+      out.textContent = dec ? (+st[key]).toFixed(dec) : String(Math.round(st[key]));
+      r.addEventListener('input', e => {
+        st[key] = parseFloat(e.target.value);
+        out.textContent = dec ? st[key].toFixed(dec) : String(Math.round(st[key]));
+        if (key === 'x' || key === 'y') positionHandles();
+      });
+      det.append(l, r, out);
+    });
+
+    more.addEventListener('click', () => {
+      const open = det.classList.toggle('open');
+      row.classList.toggle('open', open);
+      more.textContent = open ? '▴' : '▾';
+    });
+    col.addEventListener('input', e => {
+      st.hex = e.target.value.toUpperCase(); hex.value = st.hex; positionHandles();
+    });
+    hex.addEventListener('change', e => {
+      const v = e.target.value.trim();
+      if (hex2rgb(v)){ st.hex = (v.startsWith('#') ? v : '#'+v).toUpperCase(); col.value = st.hex; hex.value = st.hex; positionHandles(); }
+      else hex.value = st.hex;
+    });
+    rad.addEventListener('input', e => { st.r = parseFloat(e.target.value); });
+    del.addEventListener('click', () => {
+      if (S.stops.length <= 1){ toast('At least one colour'); return; }
+      S.stops.splice(i, 1); buildStops(); buildHandles();
+    });
+    wrap.append(row, det);
+    box.appendChild(wrap);
+  });
+}
+$('bAdd').addEventListener('click', () => {
+  if (S.stops.length >= MAXP){ toast('Maximum ' + MAXP + ' colours'); return; }
+  const r = Math.random;
+  S.stops.push(mkStop({hex: oklab2hex([0.3 + r()*0.6, (r()-0.5)*0.2, (r()-0.5)*0.2]), x: r(), y: r(), r: 0.45 + r()*0.25}));
+  buildStops(); buildHandles();
+});
+$('bSpread').addEventListener('click', () => {
+  const n = S.stops.length;
+  S.stops.forEach((st, i) => {
+    const a = (i / n) * TAU + 0.4;
+    st.x = 0.5 + Math.cos(a) * 0.33;
+    st.y = 0.5 + Math.sin(a) * 0.36;
+    st.r = 0.55;
+  });
+  buildStops(); buildHandles();
+});
+
+/* Palettes */
+function buildPalettes(){
+  const list = $('palList');
+  list.innerHTML = '';
+  PALETTES.forEach((p, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'palwrap';
+    const bar = document.createElement('div');
+    bar.className = 'pal';
+    [p.bg, ...p.c].forEach(c => { const s = document.createElement('i'); s.style.background = c; bar.appendChild(s); });
+    const lab = document.createElement('small');
+    lab.textContent = (i < 9 ? (i+1) + ' · ' : '') + p.n;
+    bar.addEventListener('click', () => applyPalette(i));
+    wrap.append(lab, bar);
+    list.appendChild(wrap);
+  });
+}
+let currentLook = -1;
+function lookCSS(cfg){
+  const layers = (cfg.stops || []).map(st => {
+    const stre = st.st || 1;
+    const rx = clamp(st.r * stre * 85, 8, 260).toFixed(0);
+    const ry = clamp(st.r / stre * 85, 8, 260).toFixed(0);
+    return 'radial-gradient(' + rx + '% ' + ry + '% at ' +
+      (st.x*100).toFixed(0) + '% ' + (st.y*100).toFixed(0) + '%, ' +
+      st.hex + ' 0%, ' + st.hex + '00 65%)';
+  });
+  return layers.join(',');
+}
+function buildLooks(){
+  const list = $('lookList');
+  list.innerHTML = '';
+  LOOKS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'look'; b.type = 'button';
+    b.innerHTML = '<span class="pv"></span><span class="nm"></span>';
+    b.lastChild.textContent = L.n;
+    b.title = L.n + ' — ' + L.d;
+    const pv = b.firstChild;
+    pv.style.backgroundColor = L.s.base;
+    pv.style.backgroundImage = lookCSS(L.s);
+    b.addEventListener('click', () => applyLook(i));
+    list.appendChild(b);
+  });
+}
+function applyLook(i){
+  const L = LOOKS[i];
+  // Format, corners and aspect ratio belong to the user, not the look
+  const keep = {w: S.w, h: S.h, radius: S.radius};
+  S = normalize(Object.assign({}, S, L.s, keep));
+  currentLook = i;
+  syncAll();
+  toast(L.n + ' — ' + L.d);
+}
+function syncLooks(){
+  [...$('lookList').children].forEach((c, i) => c.classList.toggle('on', i === currentLook));
+}
+
+function applyPalette(i){
+  const p = PALETTES[i];
+  S.base = p.bg;
+  const keepGeom = S.stops.length === p.c.length;
+  // A palette swaps colours only — point geometry stays put
+  S.stops = p.c.map((hex, k) => keepGeom
+    ? Object.assign({}, S.stops[k], {hex})
+    : mkStop({hex, x: 0.5 + Math.cos(k/p.c.length*TAU + 0.4)*0.33,
+                   y: 0.5 + Math.sin(k/p.c.length*TAU + 0.4)*0.36, r: 0.55}));
+  syncAll();
+  toast(p.n);
+}
+buildPalettes();
+
+/* Randomise */
+function randomize(){
+  const r = Math.random;
+  S.seed = Math.floor(r() * 100000);
+  const p = PALETTES[Math.floor(r() * PALETTES.length)];
+  S.base = p.bg;
+  const n = 3 + Math.floor(r() * 3);
+  S.stops = Array.from({length: n}, (_, i) => mkStop({
+    hex: p.c[i % p.c.length],
+    x: 0.10 + r() * 0.80,
+    y: 0.10 + r() * 0.80,
+    r: 0.38 + r() * 0.45,
+    st: r() < 0.7 ? 1 : 0.4 + r() * 2.2,
+    ang: Math.floor(r() * 180),
+    fall: 0.6 + r() * 0.9,
+    amp: 0.7 + r() * 0.6
+  }));
+  S.mode = r() < 0.62 ? 0 : Math.floor(r() * MODES.length);
+  S.spread = 0.45 + r() * 0.6;
+  S.falloff = 3.5 + r() * 8;
+  S.warpAmt = r() * 0.5;
+  S.warpScale = 0.7 + r() * 2.4;
+  S.warpDetail = 2 + Math.floor(r() * 3);
+  S.angle = Math.floor(r() * 360);
+  S.baseW = 0.45 + r() * 1.1;
+  S.waveAmp = r() < 0.7 ? 0 : r() * 0.2;
+  syncAll();
+}
+function shufflePoints(){
+  const r = Math.random;
+  S.seed = Math.floor(r() * 100000);
+  S.stops.forEach(st => { st.x = 0.1 + r()*0.8; st.y = 0.1 + r()*0.8; st.r = 0.38 + r()*0.45; });
+  buildHandles();
+}
+
+/* Toolbar */
+$('tPlay').addEventListener('click', togglePlay);
+$('tRnd').addEventListener('click', randomize);
+$('tShuffle').addEventListener('click', shufflePoints);
+$('tHandles').addEventListener('click', () => {
+  showHandles = !showHandles;
+  $('tHandles').classList.toggle('on', showHandles);
+  positionHandles();
+});
+$('tFit').addEventListener('click', () => {
+  fitFull = !fitFull;
+  $('tFit').classList.toggle('on', fitFull);
+  $('tFit').textContent = fitFull ? 'Fit' : 'Actual size';
+  layout();
+});
+function togglePlay(){
+  playing = !playing;
+  if (playing) t0 = performance.now() - phase * S.animDur * 1000;
+  $('tPlay').classList.toggle('on', playing);
+  $('tPlay').textContent = playing ? 'Pause' : 'Play';
+}
+
+/* Visible only in "All controls" mode */
+function markAdvanced(){
+  document.body.classList.add('simple');   // "everything" reveals .adv
+}
+$('segMode').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  document.body.classList.toggle('simple', b.dataset.adv !== '1');
+  [...$('segMode').children].forEach(c => c.classList.toggle('on', c === b));
+});
+
+/* Full sync: UI ← state */
+function syncAll(){
+  SLIDERS.forEach(([id]) => $(id)._sync());
+  $('baseCol').value = S.base; $('baseHex').textContent = S.base;
+  syncModeChips(); syncFormat(); buildStops(); buildHandles(); syncLooks(); layout();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Export: image
+   ══════════════════════════════════════════════════════════════ */
+function dl(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function stamp(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+
+function exportImage(type, ext, quality){
+  const sc = parseInt($('exScale').value);
+  const w = S.w * sc, h = S.h * sc;
+  const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+  if (Math.max(w, h) > maxTex){
+    toast('Too large for this GPU (max ' + maxTex + ' px)');
+    return;
+  }
+  sizeCanvas(w, h);
+  draw(phase, sc);
+
+  // Pick the source: with rounded corners, mask through a 2D canvas
+  let src = cv;
+  if (S.radius > 0){
+    const c2 = document.createElement('canvas');
+    c2.width = w; c2.height = h;
+    const ctx = c2.getContext('2d');
+    const rr = Math.min(S.radius * sc, w/2, h/2);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(0, 0, w, h, rr);
+    else ctx.rect(0, 0, w, h);
+    ctx.clip();
+    ctx.drawImage(cv, 0, 0);
+    src = c2;
+  }
+
+  // Wait for the blob before restoring the preview size — resizing
+  // before the snapshot would clear the framebuffer.
+  src.toBlob(blob => {
+    sizeCanvas(...previewSize());   // recompute: renderW may be 0 while rAF is paused
+    if (!blob){ toast('Export failed'); return; }
+    dl(blob, 'gradient-' + stamp() + '-' + w + 'x' + h + '.' + ext);
+    toast(ext.toUpperCase() + ' · ' + w + '×' + h + ' saved');
+  }, type, quality);
+}
+$('bPng').addEventListener('click', () => exportImage('image/png', 'png'));
+$('bJpg').addEventListener('click', () => exportImage('image/jpeg', 'jpg', 0.95));
+$('bWebp').addEventListener('click', () => exportImage('image/webp', 'webp', 0.95));
+
+/* ══════════════════════════════════════════════════════════════
+   Export: Video
+   ══════════════════════════════════════════════════════════════ */
+const VIDEO_TYPES = [
+  ['video/mp4;codecs=avc1.42E01E', 'MP4 (H.264)', 'mp4'],
+  ['video/webm;codecs=vp9', 'WebM (VP9)', 'webm'],
+  ['video/webm;codecs=vp8', 'WebM (VP8)', 'webm'],
+  ['video/webm', 'WebM', 'webm']
+];
+const supported = VIDEO_TYPES.filter(t =>
+  window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t[0]));
+{
+  const sel = $('vFmt');
+  if (!supported.length){
+    sel.innerHTML = '<option>unavailable</option>';
+    $('bVideo').disabled = true;
+  } else {
+    supported.forEach((t, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = t[1];
+      sel.appendChild(o);
+    });
+    // WebM/VP9 as default: widest compatibility for post-processing
+    const vp9 = supported.findIndex(t => t[0].includes('vp9'));
+    sel.value = vp9 >= 0 ? vp9 : 0;
+  }
+}
+
+let recorder = null, recAbort = false;
+$('recStop').addEventListener('click', () => { recAbort = true; cancelExport = true; });
+
+async function recordVideo(){
+  if (!supported.length) return;
+  const [mime, , ext] = supported[parseInt($('vFmt').value) || 0];
+  const fps = parseInt($('vFps').value);
+  const dur = S.animDur;
+  const bits = parseInt($('vBits').value) * 1e6;
+
+  // Record at target resolution (lift the preview cap)
+  let vw = S.w, vh = S.h;
+  const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+  if (Math.max(vw, vh) > maxTex){
+    const k = maxTex / Math.max(vw, vh);
+    vw = Math.round(vw*k/2)*2; vh = Math.round(vh*k/2)*2;
+  }
+  vw -= vw % 2; vh -= vh % 2;   // even dimensions for H.264
+  sizeCanvas(vw, vh);
+
+  // captureStream(fps) samples the canvas itself. Timing comes from the
+  // wall clock, because MediaRecorder stamps every frame by wall time —
+  // a fixed-step loop would distort the clip length.
+  const stream = cv.captureStream(fps);
+  const chunks = [];
+  recorder = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: bits});
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+
+  recording = true; recAbort = false;
+  $('rec').classList.add('on');
+  $('recTxt').textContent = 'Recording · ' + vw + '×' + vh + ' · keep this tab in front';
+  const done = new Promise(res => { recorder.onstop = res; });
+  recorder.start();
+
+  const tStart = performance.now();
+  await new Promise(res => {
+    const loop = () => {
+      const el = (performance.now() - tStart) / 1000;
+      if (recAbort || el >= dur){ res(); return; }
+      draw(el / dur, vh / S.h);
+      $('recBar').style.width = (el / dur * 100) + '%';
+      nextFrame(loop);
+    };
+    nextFrame(loop);
+  });
+
+  recorder.stop();
+  await done;
+  recording = false;
+  $('rec').classList.remove('on');
+  $('recBar').style.width = '0';
+  sizeCanvas(...previewSize());
+
+  if (recAbort || !chunks.length){ toast('Recording cancelled'); return; }
+  dl(new Blob(chunks, {type: mime}), 'gradient-' + stamp() + '-' + vw + 'x' + vh + '.' + ext);
+  toast('Video saved · ' + dur + ' s · ' + fps + ' fps · ' + vw + '×' + vh);
+}
+$('bVideo').addEventListener('click', () => { recordVideo().catch(e => {
+  recording = false; $('rec').classList.remove('on'); toast('Error: ' + e.message);
+}); });
+
+/* ══════════════════════════════════════════════════════════════
+   Export: code
+   ══════════════════════════════════════════════════════════════ */
+function cssCode(){
+  const pts = animatedPoints(phase);
+  const layers = S.stops.map((st, i) => {
+    const p = pts[i], stre = Math.max(st.st, 0.05);
+    const base = st.r * S.spread * 62;
+    const rx = clamp(base * stre, 6, 280).toFixed(0);
+    const ry = clamp(base / stre, 6, 280).toFixed(0);
+    // Strength maps to opacity — CSS has no weighted blend
+    const a = Math.round(clamp(st.amp, 0, 1) * 255).toString(16).padStart(2, '0');
+    return '    radial-gradient(' + rx + '% ' + ry + '% at ' +
+      (p.x*100).toFixed(1) + '% ' + (p.y*100).toFixed(1) + '%, ' +
+      st.hex + (a === 'ff' ? '' : a) + ' 0%, ' + st.hex + '00 ' + Math.round(60 + S.spread*12) + '%)';
+  });
+  const grain = S.grain > 0.004
+    ? '\n\n/* Grain overlay (SVG noise as a data URI) */\n.gradient::after{\n' +
+      '  content:""; position:absolute; inset:0; pointer-events:none;\n' +
+      '  opacity:' + (S.grain*2.2).toFixed(2) + '; mix-blend-mode:overlay;\n' +
+      "  background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='" +
+      (0.75 / Math.max(S.grainSize,0.5)).toFixed(2) + "' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\");\n}"
+    : '';
+  const rotated = S.stops.some(st => Math.abs(st.ang) > 0.5 && Math.abs(st.st - 1) > 0.02);
+  return (rotated ? '/* CSS cannot express rotated ellipses — rendered unrotated here. */\n' : '') +
+    '.gradient{\n' +
+    '  position:relative;\n' +
+    '  width:' + S.w + 'px; height:' + S.h + 'px;\n' +
+    (S.radius ? '  border-radius:' + S.radius + 'px;\n' : '') +
+    '  background-color:' + S.base + ';\n' +
+    '  background-image:\n' + layers.join(',\n') + ';\n' +
+    '  overflow:hidden;\n' +
+    '}' + grain;
+}
+
+function svgCode(){
+  const pts = animatedPoints(phase);
+  const defs = S.stops.map((st, i) => {
+    const p = pts[i], stre = Math.max(st.st, 0.05);
+    const r = clamp(st.r * S.spread * 55, 8, 200);
+    // Ellipse and rotation as a transform about the point's own centre
+    const cx = (p.x * S.w).toFixed(1), cy = (p.y * S.h).toFixed(1);
+    const tf = 'translate(' + cx + ' ' + cy + ') rotate(' + st.ang.toFixed(1) + ') scale(' +
+      stre.toFixed(3) + ' ' + (1/stre).toFixed(3) + ') translate(-' + cx + ' -' + cy + ')';
+    return '    <radialGradient id="g' + i + '" gradientUnits="userSpaceOnUse"' +
+      ' cx="' + cx + '" cy="' + cy + '" r="' + (r/100 * Math.max(S.w, S.h)).toFixed(0) + '"' +
+      ' gradientTransform="' + tf + '">\n' +
+      '      <stop offset="0%" stop-color="' + st.hex + '" stop-opacity="' + clamp(st.amp, 0, 1).toFixed(2) + '"/>\n' +
+      '      <stop offset="100%" stop-color="' + st.hex + '" stop-opacity="0"/>\n' +
+      '    </radialGradient>';
+  }).join('\n');
+  const rects = S.stops.map((_, i) =>
+    '  <rect width="100%" height="100%" fill="url(#g' + i + ')"/>').join('\n');
+  const grain = S.grain > 0.004
+    ? '\n  <filter id="grain" x="0" y="0" width="100%" height="100%">\n' +
+      '    <feTurbulence type="fractalNoise" baseFrequency="' + (0.75/Math.max(S.grainSize,0.5)).toFixed(2) +
+      '" numOctaves="3" stitchTiles="stitch"/>\n' +
+      '    <feColorMatrix type="saturate" values="0"/>\n' +
+      '  </filter>\n' +
+      '  <rect width="100%" height="100%" filter="url(#grain)" opacity="' + (S.grain*2.4).toFixed(2) +
+      '" style="mix-blend-mode:overlay"/>'
+    : '';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + S.w + '" height="' + S.h +
+    '" viewBox="0 0 ' + S.w + ' ' + S.h + '">\n' +
+    '  <defs>\n' + defs + '\n  </defs>\n' +
+    '  <rect width="100%" height="100%" fill="' + S.base + '"/>\n' +
+    rects + grain + '\n</svg>';
+}
+
+let outKind = 'css';
+function setOut(text, kind){ $('out').value = text; outKind = kind; }
+$('bCss').addEventListener('click', () => { setOut(cssCode(), 'css'); toast('CSS generated'); });
+$('bSvg').addEventListener('click', () => { setOut(svgCode(), 'svg'); toast('SVG generated'); });
+$('bJson').addEventListener('click', () => { setOut(JSON.stringify(S, null, 2), 'json'); toast('JSON generated'); });
+$('bCopy').addEventListener('click', async () => {
+  const v = $('out').value;
+  if (!v){ toast('Nothing to copy'); return; }
+  try { await navigator.clipboard.writeText(v); toast('Copied'); }
+  catch { $('out').select(); document.execCommand('copy'); toast('Copied'); }
+});
+$('bDlOut').addEventListener('click', () => {
+  const v = $('out').value;
+  if (!v){ toast('Generate CSS, SVG or JSON first'); return; }
+  const mimes = {css:'text/css', svg:'image/svg+xml', json:'application/json'};
+  dl(new Blob([v], {type: mimes[outKind]}), 'gradient-' + stamp() + '.' + outKind);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   Save / load project
+   ══════════════════════════════════════════════════════════════ */
+const LS = 'gradientlab.presets.v1';
+function myPresets(){ try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; } }
+function syncMyPresets(){
+  const sel = $('myPresets');
+  const all = myPresets();
+  sel.innerHTML = '<option value="">Saved …</option>';
+  Object.keys(all).forEach(k => {
+    const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o);
+  });
+}
+$('bSaveP').addEventListener('click', () => {
+  const name = prompt('Preset name:');
+  if (!name) return;
+  const all = myPresets(); all[name] = JSON.parse(JSON.stringify(S));
+  try { localStorage.setItem(LS, JSON.stringify(all)); syncMyPresets(); toast(name + ' saved'); }
+  catch { toast('Storage full'); }
+});
+$('myPresets').addEventListener('change', e => {
+  const all = myPresets();
+  if (all[e.target.value]){ S = normalize(all[e.target.value]); syncAll(); toast(e.target.value); }
+});
+$('bSaveFile').addEventListener('click', () => {
+  dl(new Blob([JSON.stringify(S, null, 2)], {type:'application/json'}), 'gradient-' + stamp() + '.json');
+});
+$('bLoadFile').addEventListener('click', () => $('fileIn').click());
+$('fileIn').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try { S = normalize(JSON.parse(rd.result)); syncAll(); toast('Loaded'); }
+    catch { toast('File not readable'); }
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+});
+$('bReset').addEventListener('click', () => { S = DEFAULT(); syncAll(); toast('Reset'); });
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (introOpen){
+    if (e.key === 'ArrowLeft')  applyShowcase(scIdx - 1);
+    else if (e.key === 'ArrowRight') applyShowcase(scIdx + 1);
+    else if (e.key === 'Enter' || e.key === 'Escape') openEditor();
+    return;
+  }
+  if (e.key === ' '){ e.preventDefault(); togglePlay(); }
+  else if (e.key === 'r' || e.key === 'R') randomize();
+  else if (e.key === 'e' || e.key === 'E') exportImage('image/png', 'png');
+  else if (/^[1-9]$/.test(e.key)){ const i = +e.key - 1; if (PALETTES[i]) applyPalette(i); }
+});
+
+/* ══════════════════════════════════════════════════════════════
+   GIF encoder — median-cut palette, ordered dither, LZW.
+   Written out here so the tool stays dependency-free. One global
+   colour table for every frame: a per-frame table would make the
+   animation flicker.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Median cut over sampled RGB triples → up to `max` colours. */
+function medianCut(samples, max){
+  let boxes = [{px: samples, lo:[0,0,0], hi:[255,255,255]}];
+  const spread = b => {
+    const lo = [255,255,255], hi = [0,0,0];
+    for (const p of b.px){
+      for (let k = 0; k < 3; k++){
+        if (p[k] < lo[k]) lo[k] = p[k];
+        if (p[k] > hi[k]) hi[k] = p[k];
+      }
+    }
+    b.lo = lo; b.hi = hi;
+    // weight green a little higher — the eye is most sensitive there
+    const w = [0.9, 1.2, 0.8];
+    let best = -1, dim = 0;
+    for (let k = 0; k < 3; k++){
+      const d = (hi[k] - lo[k]) * w[k];
+      if (d > best){ best = d; dim = k; }
+    }
+    b.range = best; b.dim = dim;
+    return b;
+  };
+  boxes = boxes.map(spread);
+  while (boxes.length < max){
+    let bi = -1, best = 0;
+    for (let i = 0; i < boxes.length; i++){
+      if (boxes[i].px.length > 1 && boxes[i].range > best){ best = boxes[i].range; bi = i; }
+    }
+    if (bi < 0) break;
+    const b = boxes[bi], d = b.dim;
+    b.px.sort((x, y) => x[d] - y[d]);
+    const mid = b.px.length >> 1;
+    if (mid === 0 || mid === b.px.length) break;
+    const left  = spread({px: b.px.slice(0, mid)});
+    const right = spread({px: b.px.slice(mid)});
+    boxes.splice(bi, 1, left, right);
+  }
+  return boxes.map(b => {
+    let r = 0, g = 0, bl = 0;
+    for (const p of b.px){ r += p[0]; g += p[1]; bl += p[2]; }
+    const n = Math.max(b.px.length, 1);
+    return [Math.round(r/n), Math.round(g/n), Math.round(bl/n)];
+  });
+}
+
+/* 8×8 Bayer matrix — ordered dithering stays identical frame to frame,
+   so gradients keep their shape instead of boiling. */
+const BAYER8 = (() => {
+  const m = [[0,32,8,40,2,34,10,42],[48,16,56,24,50,18,58,26],
+             [12,44,4,36,14,46,6,38],[60,28,52,20,62,30,54,22],
+             [3,35,11,43,1,33,9,41],[51,19,59,27,49,17,57,25],
+             [15,47,7,39,13,45,5,37],[63,31,55,23,61,29,53,21]];
+  const f = new Float32Array(64);
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) f[y*8+x] = m[y][x] / 64 - 0.5;
+  return f;
+})();
+
+function paletteMapper(pal){
+  const cache = new Int16Array(32768).fill(-1);
+  return (r, g, b) => {
+    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    let idx = cache[key];
+    if (idx >= 0) return idx;
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < pal.length; i++){
+      const dr = r - pal[i][0], dg = g - pal[i][1], db = b - pal[i][2];
+      const d = dr*dr*0.9 + dg*dg*1.2 + db*db*0.8;
+      if (d < bd){ bd = d; best = i; }
+    }
+    cache[key] = best;
+    return best;
+  };
+}
+
+function quantiseFrame(rgba, w, h, pal, map, amount){
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++){
+    for (let x = 0; x < w; x++){
+      const i = (y * w + x) * 4;
+      const t = BAYER8[(y & 7) * 8 + (x & 7)] * amount;
+      const r = clamp(rgba[i]   + t, 0, 255) | 0;
+      const g = clamp(rgba[i+1] + t, 0, 255) | 0;
+      const b = clamp(rgba[i+2] + t, 0, 255) | 0;
+      out[y * w + x] = map(r, g, b);
+    }
+  }
+  return out;
+}
+
+/* Growable byte sink — a push callback per byte was the bottleneck. */
+function ByteSink(){
+  let buf = new Uint8Array(1 << 18), len = 0;
+  const grow = need => {
+    if (len + need <= buf.length) return;
+    let cap = buf.length;
+    while (cap < len + need) cap *= 2;
+    const n = new Uint8Array(cap); n.set(buf.subarray(0, len)); buf = n;
+  };
+  return {
+    byte(v){ grow(1); buf[len++] = v; },
+    many(src, n){ grow(n); buf.set(src.subarray(0, n), len); len += n; },
+    str(t){ grow(t.length); for (let i = 0; i < t.length; i++) buf[len++] = t.charCodeAt(i); },
+    u16(v){ grow(2); buf[len++] = v & 255; buf[len++] = (v >> 8) & 255; },
+    done(){ return buf.subarray(0, len); }
+  };
+}
+
+/* GIF LZW — open-addressed hash table on typed arrays. */
+function lzwEncode(pixels, minCodeSize, sink){
+  const CLEAR = 1 << minCodeSize, END = CLEAR + 1, HSIZE = 5003;
+  const htab = new Int32Array(HSIZE), codetab = new Int32Array(HSIZE);
+  let nbits = minCodeSize + 1, maxcode = (1 << nbits) - 1;
+  let free = END + 1, clearFlag = false;
+  let acc = 0, accBits = 0;
+  const block = new Uint8Array(256);
+  let blen = 0;
+
+  const flushBlock = () => { if (blen){ sink.byte(blen); sink.many(block, blen); blen = 0; } };
+  const charOut = c => { block[blen++] = c; if (blen === 254) flushBlock(); };
+
+  function output(code){
+    acc |= code << accBits;
+    accBits += nbits;
+    while (accBits >= 8){ charOut(acc & 255); acc >>>= 8; accBits -= 8; }
+    if (free > maxcode || clearFlag){
+      if (clearFlag){ nbits = minCodeSize + 1; clearFlag = false; }
+      else if (nbits < 12) nbits++;
+      maxcode = nbits === 12 ? (1 << 12) : (1 << nbits) - 1;
+    }
+    if (code === END){
+      while (accBits > 0){ charOut(acc & 255); acc >>>= 8; accBits -= 8; }
+      flushBlock();
+    }
+  }
+  function clearBlock(){
+    htab.fill(-1);
+    free = END + 1;
+    clearFlag = true;
+    output(CLEAR);
+  }
+
+  htab.fill(-1);
+  output(CLEAR);
+  let ent = pixels[0];
+  for (let i = 1; i < pixels.length; i++){
+    const c = pixels[i];
+    const fcode = (c << 12) + ent;
+    let idx = ((c << 4) ^ ent) % HSIZE;
+    let hit = false;
+    if (htab[idx] === fcode){ ent = codetab[idx]; hit = true; }
+    else if (htab[idx] >= 0){
+      const disp = idx === 0 ? 1 : HSIZE - idx;
+      for (;;){
+        idx -= disp;
+        if (idx < 0) idx += HSIZE;
+        if (htab[idx] === fcode){ ent = codetab[idx]; hit = true; break; }
+        if (htab[idx] < 0) break;
+      }
+    }
+    if (hit) continue;
+    output(ent);
+    ent = c;
+    if (free < 4096){ codetab[idx] = free++; htab[idx] = fcode; }
+    else clearBlock();
+  }
+  output(ent);
+  output(END);
+  sink.byte(0);   // block terminator
+}
+
+/* frames: array of Uint8Array palette indices. delay in 1/100 s. */
+function buildGif(frames, w, h, pal, delay){
+  const k = ByteSink();
+
+  let bpp = 1;
+  while ((1 << bpp) < pal.length) bpp++;
+  const tableSize = 1 << bpp;
+
+  k.str('GIF89a');
+  k.u16(w); k.u16(h);
+  k.byte(0x80 | ((bpp - 1) << 4) | (bpp - 1));   // global colour table
+  k.byte(0); k.byte(0);
+  for (let i = 0; i < tableSize; i++){
+    const c = pal[i] || [0,0,0];
+    k.byte(c[0]); k.byte(c[1]); k.byte(c[2]);
+  }
+  // Netscape extension — loop forever
+  k.byte(0x21); k.byte(0xFF); k.byte(11);
+  k.str('NETSCAPE2.0');
+  k.byte(3); k.byte(1); k.u16(0); k.byte(0);
+
+  const minCode = Math.max(2, bpp);
+  for (const idx of frames){
+    k.byte(0x21); k.byte(0xF9); k.byte(4);
+    k.byte(0);                      // no disposal, no transparency
+    k.u16(delay);
+    k.byte(0); k.byte(0);
+    k.byte(0x2C);
+    k.u16(0); k.u16(0); k.u16(w); k.u16(h);
+    k.byte(0);                      // no local table, not interlaced
+    k.byte(minCode);
+    lzwEncode(idx, minCode, k);
+  }
+  k.byte(0x3B);
+  return new Blob([k.done()], {type: 'image/gif'});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Showcase slider
+   ══════════════════════════════════════════════════════════════ */
+let scIdx = 0;
+
+/* ══ Instagram post, drawn to a real 1080 × 1350 canvas ═════════
+   Everything except the gradient is static per slide, so it is
+   rendered once into an offscreen canvas and blitted each frame. */
+const POST_W = 1080, POST_H = 1350;
+const GX = 80, GY = 248, GW = 920, GH = 578;          // gradient block
+const INK = '#15181D', SUB = '#8A929E', RULE = '#D9DDE3';
+const MONO = 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace';
+
+const postCv = document.createElement('canvas');
+postCv.width = POST_W; postCv.height = POST_H;
+const postCtx = postCv.getContext('2d');
+const staticCv = document.createElement('canvas');
+staticCv.width = POST_W; staticCv.height = POST_H;
+const staticCtx = staticCv.getContext('2d');
+
+function swatch(c, x, y, w, h, col, name){
+  c.fillStyle = col;
+  c.fillRect(x, y, w, h);
+  const rgb = hex2rgb(col) || [0,0,0];
+  const lum = 0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2];
+  const fg = lum > 0.55 ? 'rgba(0,0,0,.86)' : 'rgba(255,255,255,.94)';
+  c.fillStyle = fg;
+  c.font = '500 25px ' + MONO;
+  c.textBaseline = 'top';
+  c.fillText(name.toLowerCase(), x + 18, y + 16);
+  c.font = '400 21px ' + MONO;
+  c.globalAlpha = 0.72;
+  c.textBaseline = 'bottom';
+  c.fillText(col.toLowerCase(), x + 18, y + h - 15);
+  c.globalAlpha = 1;
+}
+
+function drawPostStatic(sc){
+  const c = staticCtx;
+  c.clearRect(0, 0, POST_W, POST_H);
+
+  const bg = c.createLinearGradient(0, 0, POST_W, POST_H);
+  bg.addColorStop(0, '#FFFFFF');
+  bg.addColorStop(1, '#E8EBF0');
+  c.fillStyle = bg;
+  c.fillRect(0, 0, POST_W, POST_H);
+
+  // Title — deliberately uncoloured: nothing should compete with the gradient
+  const title = sc.name.toLowerCase().replace(/\s+/g, '-') + '.gradient';
+  c.font = '600 40px ' + MONO;
+  c.textBaseline = 'alphabetic';
+  c.fillStyle = INK;
+  c.fillText(title, GX, 126);
+
+  c.fillStyle = RULE;
+  c.fillRect(GX, 190, POST_W - GX*2, 1);
+
+  // Bento — one large, two stacked, one wide
+  const g = 12, by = GY + GH + 30;
+  const bigW = 596, colW = POST_W - GX*2 - bigW - g, halfH = (190 - g) / 2;
+  swatch(c, GX,             by,               bigW,  190, sc.colours[0].hex, sc.colours[0].n);
+  swatch(c, GX + bigW + g,  by,               colW,  halfH, sc.colours[1].hex, sc.colours[1].n);
+  swatch(c, GX + bigW + g,  by + halfH + g,   colW,  halfH, sc.colours[2].hex, sc.colours[2].n);
+  swatch(c, GX,             by + 190 + g,     POST_W - GX*2, 96, sc.colours[3].hex, sc.colours[3].n);
+
+  // Footer
+  const fy = 1215;
+  c.fillStyle = RULE;
+  c.fillRect(GX, fy, POST_W - GX*2, 1);
+
+  // bookmark mark + save for later
+  const my = fy + 42;
+  c.fillStyle = INK;
+  c.beginPath();
+  c.moveTo(GX, my); c.lineTo(GX + 26, my); c.lineTo(GX + 26, my + 46);
+  c.lineTo(GX + 13, my + 34); c.lineTo(GX, my + 46);
+  c.closePath(); c.fill();
+  c.font = '400 29px ' + MONO;
+  c.textBaseline = 'alphabetic';
+  const save = 'save for later';
+  c.fillText(save, GX + 44, my + 38);
+  const sw = c.measureText(save).width;
+  c.fillStyle = INK;
+  c.fillRect(GX + 44, my + 50, sw, 3);
+
+  // signature
+  const rx = POST_W - GX - 92;
+  c.textAlign = 'right';
+  c.fillStyle = INK;
+  c.font = '600 29px ' + MONO;
+  c.fillText('florian hack', rx, my + 24);
+  c.fillStyle = SUB;
+  c.font = '400 25px ' + MONO;
+  c.fillText('head of brand, accilium', rx, my + 58);
+  c.textAlign = 'left';
+
+  // avatar
+  const cx = POST_W - GX - 38, cy = my + 32;
+  c.beginPath(); c.arc(cx, cy, 38, 0, Math.PI*2);
+  c.fillStyle = INK; c.fill();
+  c.fillStyle = '#fff';
+  c.font = '500 26px ' + MONO;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('fh', cx, cy + 1);
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+}
+
+function drawPost(){
+  postCtx.drawImage(staticCv, 0, 0);
+  postCtx.drawImage(cv, GX, GY, GW, GH);
+  postCtx.strokeStyle = 'rgba(0,0,0,.10)';
+  postCtx.strokeRect(GX + 0.5, GY + 0.5, GW - 1, GH - 1);
+}
+
+function applyShowcase(i){
+  scIdx = (i + SHOWCASE.length) % SHOWCASE.length;
+  const sc = SHOWCASE[scIdx];
+  // While the showcase is open the gradient fills the post's block,
+  // so it renders in that aspect ratio rather than the export format.
+  S = normalize(Object.assign(DEFAULT(), sc.s, {
+    w: GW * 2, h: GH * 2, radius: 0, base: sc.base, baseW: sc.baseW,
+    stops: sc.geom.map((g, k) => mkStop(Object.assign({hex: sc.colours[k].hex}, g)))
+  }));
+  currentLook = -1;
+  drawPostStatic(sc);
+  [...$('iDots').children].forEach((d, k) => d.classList.toggle('on', k === scIdx));
+  $('scName').textContent = sc.name;
+  syncAll();
+}
+function buildDots(){
+  const box = $('iDots');
+  box.innerHTML = '';
+  SHOWCASE.forEach((_, i) => {
+    const d = document.createElement('i');
+    d.addEventListener('click', () => applyShowcase(i));
+    box.appendChild(d);
+  });
+}
+let introOpen = true;
+function openEditor(){
+  if (!introOpen) return;
+  introOpen = false;
+  introEl.classList.add('hide');
+  S.w = 1080; S.h = 1350;          // hand over in Instagram portrait
+  syncFormat();
+  setTimeout(() => { introEl.style.display = 'none'; layout(); }, 340);
+  layout();
+}
+function showIntro(){
+  if (introOpen) return;
+  introOpen = true;
+  introEl.style.display = 'flex';
+  applyShowcase(scIdx);
+  requestAnimationFrame(() => introEl.classList.remove('hide'));
+}
+$('iSave').addEventListener('click', () => {
+  drawPost();
+  postCv.toBlob(b => {
+    if (!b){ toast('Export failed'); return; }
+    dl(b, 'post-' + SHOWCASE[scIdx].name.toLowerCase().replace(/\s+/g,'-') + '-' + stamp() + '.png');
+    toast('Post saved · 1080 × 1350');
+  }, 'image/png');
+});
+$('iPrev').addEventListener('click', () => applyShowcase(scIdx - 1));
+$('iNext').addEventListener('click', () => applyShowcase(scIdx + 1));
+/* ══════════════════════════════════════════════════════════════
+   Animated export of a single card — MP4/WebM and GIF
+   ══════════════════════════════════════════════════════════════ */
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+/* requestAnimationFrame stops firing in a background tab, which would
+   hang a recording forever. The timer is a fallback so the loop always
+   advances — slower, but it always finishes. */
+function nextFrame(cb){
+  let fired = false;
+  const go = () => { if (!fired){ fired = true; cb(); } };
+  requestAnimationFrame(go);
+  setTimeout(go, 200);
+}
+let cancelExport = false;
+
+function exportBusy(on, text){
+  $('rec').classList.toggle('on', on);
+  if (text) $('recTxt').textContent = text;
+  if (!on) $('recBar').style.width = '0';
+}
+const setProgress = f => { $('recBar').style.width = Math.round(f * 100) + '%'; };
+
+/* Renders frame i of n straight into the post canvas.
+   The size is set explicitly: the idle rAF loop normally does this, but
+   it is paused during an export (and dead in a background tab), which
+   would leave the WebGL canvas undimensioned and the gradient black. */
+function renderPostFrame(i, n){
+  sizeCanvas(...previewSize());
+  draw(i / n, (GH * 2) / S.h);
+  drawPost();
+}
+
+async function gifForCard(seconds, fps, outW, label){
+  const outH = Math.round(outW * POST_H / POST_W);
+  const n = Math.round(seconds * fps);
+  const tmp = document.createElement('canvas');
+  tmp.width = outW; tmp.height = outH;
+  const tctx = tmp.getContext('2d', {willReadFrequently: true});
+  const grab = i => {
+    renderPostFrame(i, n);
+    tctx.drawImage(postCv, 0, 0, outW, outH);
+    return tctx.getImageData(0, 0, outW, outH).data;
+  };
+
+  // Pass 1 — one palette for the whole clip, sampled across the loop
+  const samples = [];
+  const step = Math.max(1, Math.floor(n / 8));
+  for (let i = 0; i < n; i += step){
+    if (cancelExport) return null;
+    const d = grab(i);
+    for (let q = 0; q < d.length; q += 4 * 37) samples.push([d[q], d[q+1], d[q+2]]);
+    exportBusy(true, label + ' · reading colours');
+    await tick();
+  }
+  const pal = medianCut(samples, 256);
+  const map = paletteMapper(pal);
+
+  // Pass 2 — quantise every frame against that palette
+  const frames = [];
+  for (let i = 0; i < n; i++){
+    if (cancelExport) return null;
+    frames.push(quantiseFrame(grab(i), outW, outH, pal, map, 8));
+    setProgress((i + 1) / n);
+    exportBusy(true, label + ' · GIF frame ' + (i+1) + '/' + n);
+    if (i % 4 === 0) await tick();
+  }
+  exportBusy(true, label + ' · packing GIF');
+  await tick();
+  return buildGif(frames, outW, outH, pal, Math.round(100 / fps));
+}
+
+async function videoForCard(seconds, fps, label){
+  if (!supported.length) return null;
+  // Same choice as the editor — the dropdown defaults to VP9, which is
+  // the most reliable MediaRecorder path here.
+  const [mime, , ext] = supported[parseInt($('vFmt').value) || 0];
+  const stream = postCv.captureStream(fps);
+  const chunks = [];
+  const rec = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: 14e6});
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  const done = new Promise(r => { rec.onstop = r; });
+  rec.start();
+  const t0 = performance.now();
+  let painted = 0;
+  await new Promise(res => {
+    const loop = () => {
+      const el = (performance.now() - t0) / 1000;
+      if (cancelExport || el >= seconds){ res(); return; }
+      // Wall-clock driven: MediaRecorder timestamps by real time
+      const ph = (el / seconds) % 1;
+      draw(ph, (GH * 2) / S.h);
+      drawPost();
+      painted++;
+      setProgress(el / seconds);
+      exportBusy(true, label + ' · recording ' + el.toFixed(1) + 's / ' + seconds + 's');
+      nextFrame(loop);
+    };
+    nextFrame(loop);
+  });
+  rec.stop();
+  await done;
+  if (cancelExport || !chunks.length) return null;
+  const blob = new Blob(chunks, {type: mime});
+  // A hidden tab starves both rAF and canvas capture; the file would be
+  // unplayable. Say so instead of handing over a broken clip.
+  const thin = painted < seconds * fps * 0.5 || blob.size < seconds * 120000;
+  return {blob, ext, thin, painted};
+}
+
+function cardSlug(i){ return SHOWCASE[i].name.toLowerCase().replace(/\s+/g, '-'); }
+
+async function exportCards(indices, what){
+  if (what !== 'gif' && document.hidden){
+    toast('Bring this tab to the front — video capture needs it visible');
+    return;
+  }
+  const seconds = +$('iDur').value;
+  const outW = +$('iGw').value;
+  const gifFps = 12.5, vidFps = 30;
+  cancelExport = false;
+  recording = true;                       // stop the idle render loop
+  const restore = {dur: S.animDur, grainAnim: S.grainAnim};
+
+  try {
+    for (let k = 0; k < indices.length; k++){
+      if (cancelExport) break;
+      const i = indices[k];
+      applyShowcase(i);
+      S.animDur = seconds;                // one loop == the clip length
+      const label = (k+1) + '/' + indices.length + '  ' + SHOWCASE[i].name;
+
+      if (what !== 'gif'){
+        exportBusy(true, label + ' · recording');
+        const v = await videoForCard(seconds, vidFps, label);
+        if (v){
+          dl(v.blob, cardSlug(i) + '-' + seconds + 's.' + v.ext);
+          if (v.thin) toast('Clip is thin (' + v.painted + ' frames) — keep this tab in front');
+        }
+      }
+      if (what !== 'video'){
+        S.grainAnim = 0;                  // moving grain wrecks GIF compression
+        const g = await gifForCard(seconds, gifFps, outW, label);
+        if (g) dl(g, cardSlug(i) + '-' + seconds + 's.gif');
+        S.grainAnim = restore.grainAnim;
+      }
+    }
+  } finally {
+    S.animDur = restore.dur;
+    S.grainAnim = restore.grainAnim;
+    recording = false;
+    exportBusy(false);
+    applyShowcase(scIdx);
+    toast(cancelExport ? 'Export cancelled' : 'Export done');
+  }
+}
+
+$('iMp4').addEventListener('click', () => exportCards([scIdx], 'video'));
+$('iGif').addEventListener('click', () => exportCards([scIdx], 'gif'));
+$('iAll').addEventListener('click', () =>
+  exportCards(SHOWCASE.map((_, i) => i), 'both'));
+
+/* Resolves a sibling page for every way this can be served:
+   /gradientlab, /gradientlab/, /gradientlab/index.html or a local file. */
+function pageUrl(name){
+  const p = location.pathname;
+  if (/\.html?$/i.test(p)) return p.replace(/[^/]*$/, name);
+  return p.replace(/\/+$/, '') + '/' + name;
+}
+
+function toEditor(){
+  // Hand the current palette over to the editor page
+  try {
+    localStorage.setItem(HANDOFF, JSON.stringify(Object.assign({}, S, {w:1080, h:1350, radius:0})));
+  } catch (e){ /* storage full or blocked — the editor just opens with defaults */ }
+  location.href = pageUrl('index.html');
+}
+$('iOpen').addEventListener('click', () => SHOWCASE_MODE ? toEditor() : openEditor());
+$('shot').addEventListener('click', () => SHOWCASE_MODE ? toEditor() : openEditor());
+$('backIntro').addEventListener('click', e => {
+  e.preventDefault();
+  if (SHOWCASE_MODE) showIntro(); else location.href = pageUrl('slider.html');
+});
+
+/* Automation hook — lets a script drive the showcase frame by frame
+   (deterministic rendering for offline encoding). Read-only helpers. */
+window.gradientLab = {
+  cards: () => SHOWCASE.map(c => ({name: c.name, colours: c.colours})),
+  select: i => applyShowcase(i),
+  frame: (i, n) => renderPostFrame(i, n),
+  postCanvas: () => postCv,
+  size: () => [POST_W, POST_H]
+};
+
+/* Start */
+buildLooks();
+buildDots();
+markAdvanced();
+syncMyPresets();
+if (SHOWCASE_MODE){
+  shotEl.appendChild(postCv);
+  applyShowcase(0);
+} else {
+  // Editor: no landing page, straight to work
+  introOpen = false;
+  introEl.remove();
+  let handed = null;
+  try {
+    const raw = localStorage.getItem(HANDOFF);
+    if (raw){ localStorage.removeItem(HANDOFF); handed = JSON.parse(raw); }
+  } catch (e){ handed = null; }
+  if (handed) S = normalize(handed);
+  syncAll();
+}
+})();
+</script>
+</body>
+</html>
