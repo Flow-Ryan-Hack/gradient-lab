@@ -5,17 +5,22 @@ and video. No build step, no dependencies, nothing to install.
 
 Two pages, one codebase:
 
-| File | What it is |
-|---|---|
-| `index.html` | The editor. Opens straight into the canvas, no landing page. |
-| `slider.html` | The showcase — ready-made 1080 × 1350 posts you can page through and save. |
+| File | Route | What it is |
+|---|---|---|
+| `index.html` | `/` | The showcase and the entry point — ready-made 1080 × 1350 posts you can page through and save. |
+| `editor.html` | `/editor` | The editor. Opens straight into the canvas, no landing page. |
+
+Live at [flohack.com/gradientlab](https://flohack.com/gradientlab), the
+editor at `/gradientlab/editor`.
 
 `Open editor` in the showcase hands the current palette to the editor
-through `localStorage`; `showcase` in the editor footer goes back.
+through `localStorage`; `showcase` in the editor footer goes back. Both
+links work out the other page from `location.pathname`, so they hold up on
+the pretty routes, on the bare `.html` files and on a local disk copy alike.
 
-`slider.html` is generated from `index.html` — they differ only in one
-flag and the title. After editing `index.html`, run `./build-slider.sh`
-to regenerate it.
+**`editor.html` is the file you edit.** `index.html` is generated from it —
+they differ only in one flag and the title. After changing `editor.html`,
+run `./build-showcase.sh` to regenerate the showcase.
 
 ## Why the gradients look clean
 
@@ -37,7 +42,13 @@ slide to PNG at full size.
 Seven slides, starting with the two brand palettes: **flohack**
 (chalk / acid / steel / ink) and **accilium** (mint / petrol / berry /
 deep), followed by Ceramic, Signal, Tidal, Neon Dusk and Kiln. Both brand
-palettes are also in the editor's palette list.
+palettes are in the editor's palette list, and so are the Signal, Neon Dusk
+and Kiln colour sets.
+
+All seven share one form — the *sunrise* look, laid out as stacked bands —
+so the palettes can be compared without the shape shifting underneath.
+Colour comes from each card's own list and ground; the movement is kept
+slight on purpose, since these are backgrounds, not animations.
 
 The post layout stays deliberately colourless — no accent, no highlight —
 so nothing competes with the gradient itself.
@@ -102,10 +113,12 @@ so the same look fits any canvas size.
 | paper | Almost white, barely there — for light layouts |
 | spotlight | A single cone in the dark |
 
-Eight **palettes** — flohack and accilium first, then horizon,
-fog & almond, matcha roast, crimson sand, cobalt ink, paper. A palette
-swaps colours only and leaves the points in place, so any look can be
-run through every colour world.
+Eleven **palettes** — flohack and accilium first, then horizon,
+fog & almond, matcha roast, crimson sand, cobalt ink, paper, and the three
+that come straight out of the showcase: signal, neon dusk, kiln. Keys `1`–`9`
+reach the first nine, the last two are a click. A palette swaps colours only
+and leaves the points in place, so any look can be run through every colour
+world.
 
 ## Every point on its own
 
@@ -121,6 +134,47 @@ The arrow in a colour row opens what sets that point apart:
 
 That is how one colour reaches far while its neighbour stays a tight
 spot, without touching the global focus.
+
+## All points, or just one
+
+`form` and `finish` hold the global sliders; the switch above them decides
+what those sliders aim at.
+
+| Scope | The sliders write |
+|---|---|
+| `all points` | the global value, as before |
+| `point n` | the selected point's own factor |
+
+Click a point on the canvas or its colour row to select it — the handle
+takes a neon ring, and the switch shows its number and colour.
+
+Three buttons sit under the switch:
+
+| Button | What it does |
+|---|---|
+| `shuffle all` | Rolls the whole set: colours, points, form, grain, tone, motion and every point's own factors. Format, corners and aspect ratio stay put — canvas size is not a matter of taste. Rotation is held to whole turns so the loop still closes. |
+| `reset` | Back to the defaults, the four starting points included |
+| `remove point` | Drops the selected point. `Backspace` does the same, and the `×` in the colour row still works. |
+
+This is not a second set of parameters. `spread` and `focus` were always
+multipliers on a point's own reach and edge, so in point scope the same
+slider simply addresses the local value:
+
+| Slider | Per point |
+|---|---|
+| `spread` | that point's reach |
+| `focus` | that point's edge |
+| `warp` | how much of the shared distortion the point takes along — 1 is all of it |
+| `drift` · `breathing` · `rotation` | the point's share of the global motion |
+
+The rows without a per-point counterpart go grey instead of pretending.
+`mode`, `angle`, the wave and warp-field settings and the loop duration
+describe the field that every point shares; `grain`, `vignette`,
+`contrast`, `brightness`, `saturation` and `posterise` run after the blend,
+on the finished pixel, where single points no longer exist.
+
+Point scope and the arrow in a colour row reach the same values from two
+sides — reach and edge stay in step whichever one you move.
 
 ## Recipes
 
@@ -177,8 +231,8 @@ next to it as `.json`.
 
 ## Keys
 
-`Space` play/pause · `R` random · `E` PNG · `1`–`8` palette ·
-`←` `→` slider · `Enter` open editor
+`Space` play/pause · `R` random · `E` PNG · `1`–`9` palette ·
+`⌫` remove the selected point · `←` `→` slider · `Enter` open editor
 
 ## Limits
 
@@ -193,6 +247,9 @@ next to it as `.json`.
   rotation and says so in a comment. SVG can, via `gradientTransform`.
 - *Conic* and *Spiral* carry a singularity at the centre by nature. For
   calm bands use Mesh with stretched points instead.
+- `rotation` closes the loop only at whole turns — at 0.5 the points end up
+  half a revolution on when the clip restarts. That already applied to the
+  global slider; a point's own share multiplies it.
 - Hosting note: some sandboxed embeds block script-initiated downloads,
   which disables every export button. Serve the files from a normal
   origin — local file, or any static host — for the exports to work.
