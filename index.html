@@ -208,6 +208,15 @@
   /* In "point" scope the rows that describe the shared field step back —
      they have no per-point counterpart and would be lying if they stayed live. */
   body.point-scope .glob{opacity:.32; pointer-events:none}
+  /* A row the selected effect has no use for */
+  .row.off{opacity:.32; pointer-events:none}
+  /* Without a photo the photo-only controls are dead weight — same grey as
+     the rows an effect does not read. */
+  #s-image.no-photo #imgBlendChips, #s-image.no-photo #imgFitChips,
+  #s-image.no-photo .row:has(#imgOpacity), #s-image.no-photo .row:has(#imgScale),
+  #s-image.no-photo .row:has(#imgX), #s-image.no-photo .row:has(#imgY),
+  #s-image.no-photo #bImgClear{opacity:.32; pointer-events:none}
+  #stage.drop{outline:2px dashed var(--neon); outline-offset:-10px}
   .pt-only{display:none}
   body.point-scope .pt-only{display:block}
   #segScope i{display:inline-block; width:6px; height:6px; border-radius:50%;
@@ -363,7 +372,7 @@
       </div>
     </div>
 
-    <section id="s-look">
+    <section id="s-look" class="closed">
       <h2><b>look</b><i>preset · palette</i></h2>
       <div class="body">
         <div class="looks" id="lookList"></div>
@@ -375,7 +384,7 @@
       </div>
     </section>
 
-    <section id="s-colors">
+    <section id="s-colors" class="closed">
       <h2><b>colours</b><i>points</i></h2>
       <div class="body">
         <div class="row">
@@ -397,11 +406,12 @@
       </div>
     </section>
 
-    <section id="s-form">
+    <section id="s-form" class="closed">
       <h2><b>form</b><i>shape · distortion</i></h2>
       <div class="body">
         <div class="chips" id="modeChips"></div>
         <div class="row"><label>spread</label><input type="range" id="spread" min="0.15" max="3" step="0.01" value="0.62"><output></output></div>
+        <div class="row"><label>stretch</label><input type="range" id="stretch" min="0.25" max="6" step="0.05" value="1"><output></output></div>
         <div class="row"><label>focus</label><input type="range" id="falloff" min="0.5" max="20" step="0.1" value="7"><output></output></div>
         <div class="row"><label>warp</label><input type="range" id="warpAmt" min="0" max="1.2" step="0.01" value="0.22"><output></output></div>
         <div class="row adv"><label>angle</label><input type="range" id="angle" min="0" max="360" step="1" value="0"><output></output></div>
@@ -414,7 +424,7 @@
       </div>
     </section>
 
-    <section id="s-finish">
+    <section id="s-finish" class="closed">
       <h2><b>finish</b><i>grain · motion</i></h2>
       <div class="body">
         <div class="row"><label>grain</label><input type="range" id="grain" min="0" max="0.5" step="0.005" value="0.1"><output></output></div>
@@ -430,12 +440,52 @@
         <div class="row adv"><label>posterise</label><input type="range" id="posterize" min="0" max="24" step="1" value="0"><output></output></div>
         <div class="row adv"><label>breathing</label><input type="range" id="animBreath" min="0" max="1" step="0.01" value="0.25"><output></output></div>
         <div class="row adv"><label>rotation</label><input type="range" id="animSpin" min="-2" max="2" step="0.05" value="0"><output></output></div>
+        <div class="row adv"><label>pulse</label><input type="range" id="animPulse" min="0" max="1" step="0.01" value="0"><output></output></div>
+        <div class="row adv"><label>oval turn</label><input type="range" id="animTurn" min="-2" max="2" step="1" value="0"><output></output></div>
         <p class="note">the loop closes exactly — no visible cut</p>
+        <p class="note adv">pulse and turn work the ellipses — mesh mode, and each point takes its breathing / rotation share</p>
         <p class="note pt-only">grey rows stay global — grain and tone run after the blend</p>
       </div>
     </section>
 
-    <section id="s-export">
+    <section id="s-image" class="closed">
+      <h2><b>image</b><i>photo · blend</i></h2>
+      <div class="body">
+        <div class="grid2">
+          <button class="btn" id="bImgLoad">load photo</button>
+          <button class="btn" id="bImgClear">remove</button>
+        </div>
+        <div class="chips" id="imgBlendChips"></div>
+        <div class="row"><label>photo</label><input type="range" id="imgOpacity" min="0" max="1" step="0.01" value="1"><output></output></div>
+        <div class="row"><label>gradient</label><input type="range" id="gradOpacity" min="0" max="1" step="0.01" value="1"><output></output></div>
+        <div class="chips adv" id="imgFitChips"></div>
+        <div class="row adv"><label>zoom</label><input type="range" id="imgScale" min="0.2" max="4" step="0.01" value="1"><output></output></div>
+        <div class="row adv"><label>shift x</label><input type="range" id="imgX" min="-0.5" max="0.5" step="0.005" value="0"><output></output></div>
+        <div class="row adv"><label>shift y</label><input type="range" id="imgY" min="-0.5" max="0.5" step="0.005" value="0"><output></output></div>
+        <div class="row">
+          <label for="tintCol">tint</label>
+          <input type="color" id="tintCol" value="#FF3B1F" style="width:100%; height:26px">
+          <output id="tintHex">#FF3B1F</output>
+        </div>
+        <div class="chips" id="tintBlendChips"></div>
+        <div class="row"><label>tint amount</label><input type="range" id="tintOpacity" min="0" max="1" step="0.01" value="0"><output></output></div>
+        <p class="note" id="imgNote"></p>
+      </div>
+    </section>
+
+    <section id="s-layer" class="closed">
+      <h2><b>layer</b><i>effects</i></h2>
+      <div class="body">
+        <div class="chips" id="fxChips"></div>
+        <div class="row" data-fx="scale"><label>cell</label><input type="range" id="fxScale" min="2" max="40" step="1" value="8"><output></output></div>
+        <div class="row" data-fx="steps"><label>steps</label><input type="range" id="fxSteps" min="2" max="12" step="1" value="4"><output></output></div>
+        <div class="row" data-fx="angle"><label>screen angle</label><input type="range" id="fxAngle" min="0" max="180" step="1" value="15"><output></output></div>
+        <div class="row" data-fx="amount"><label>amount</label><input type="range" id="fxAmount" min="0" max="1" step="0.01" value="1"><output></output></div>
+        <p class="note" id="fxNote"></p>
+      </div>
+    </section>
+
+    <section id="s-export" class="closed">
       <h2><b>export</b><i>format · files</i></h2>
       <div class="body">
         <div class="chips" id="fmtChips"></div>
@@ -488,6 +538,7 @@
 <div id="toast"></div>
 <div id="rec"><div id="recTxt">Recording …</div><div class="bar"><i id="recBar"></i></div><button class="btn" id="recStop">Cancel</button></div>
 <input type="file" id="fileIn" accept="application/json" style="display:none">
+<input type="file" id="imgIn" accept="image/*" style="display:none">
 
 <script>
 (() => {
@@ -558,7 +609,18 @@ const PALETTES = [
   /* Straight out of the showcase — same colours as the slides of those names */
   {n:'signal',       bg:'#000000', c:['#E8E4DC','#FF3B1F','#4A5560','#0B0B0C']},
   {n:'neon dusk',    bg:'#0A0618', c:['#E6F1FF','#6C4BFF','#FF5CA8','#120C2E']},
-  {n:'kiln',         bg:'#140C09', c:['#F5C77E','#E2703A','#6B8F71','#1C1210']}
+  {n:'kiln',         bg:'#140C09', c:['#F5C77E','#E2703A','#6B8F71','#1C1210']},
+  /* From the reference sheets: thermal maps, the Nuevo Tokyo greydients,
+     and a few gradient studies. Only 1-9 have a keyboard shortcut. */
+  {n:'heat map',     bg:'#04070F', c:['#FF2A00','#FFD400','#22C55E','#1E6BFF']},
+  {n:'japanese',     bg:'#000B00', c:['#FBFAF5','#C9A48A','#44617B','#000B00']},
+  {n:'greydient',    bg:'#0F1410', c:['#D9D9D4','#E8D67A','#5A5F58','#131A14']},
+  {n:'poster dusk',  bg:'#1A1040', c:['#FFE49A','#FF4E6B','#6A4BC4','#241B5C']},
+  {n:'iridescent',   bg:'#050506', c:['#F0E6D2','#E8A33D','#2E6FA8','#8A5BC8']},
+  {n:'riso jet',     bg:'#0A0A0A', c:['#FF2D1F','#FFE01B','#2BC24A','#1E7BE0']},
+  {n:'alpine dusk',  bg:'#120018', c:['#FF7A2F','#B2F35A','#A24BE0','#2A0A38']},
+  {n:'ember teal',   bg:'#100604', c:['#F4B14A','#E8391B','#0F5F63','#180806']},
+  {n:'ice fold',     bg:'#00081C', c:['#DFF3FF','#2A8CFF','#0A2F8C','#001233']}
 ];
 
 /* ══════════════════════════════════════════════════════════════
@@ -567,11 +629,11 @@ const PALETTES = [
    ══════════════════════════════════════════════════════════════ */
 const LOOKS = [
 {n:'Horizon', d:'Light edge below, deep black above',
- s:{mode:0, base:'#000000', baseW:0.22, spread:1.0, falloff:4.0, angle:0,
+ s:{mode:0, base:'#000000', baseW:0.22, spread:1.0, falloff:4.0, angle:0, stretch:1,
     waveAmp:0, waveFreq:3, warpAmt:0.05, warpScale:1.2, warpDetail:2, warpDrift:0.3,
     grain:0.055, grainSize:1, grainMid:0.5, vignette:0.05, contrast:1.05,
     brightness:0, saturation:1, posterize:0,
-    animAmp:0.015, animBreath:0.10, animSpin:0, animDur:14,
+    animAmp:0.015, animBreath:0.10, animSpin:0, animPulse:0, animTurn:0, animDur:14,
     stops:[
       {hex:'#FFFFFF', x:0.50, y:1.28, r:1.25, st:1.6, ang:0, fall:0.42, amp:2.40},
       {hex:'#EAF3F7', x:0.50, y:0.82, r:0.20, st:5.0, ang:0, fall:1.40, amp:1.45},
@@ -579,22 +641,22 @@ const LOOKS = [
       {hex:'#000508', x:0.55, y:0.10, r:0.85, st:2.2, ang:0, fall:0.70, amp:1.50}]}},
 
 {n:'Fog Bank', d:'Soft diagonal, warm haze, heavy grain',
- s:{mode:0, base:'#050505', baseW:0.85, spread:1.0, falloff:3.2, angle:0,
+ s:{mode:0, base:'#050505', baseW:0.85, spread:1.0, falloff:3.2, angle:0, stretch:1,
     waveAmp:0, waveFreq:3, warpAmt:0.14, warpScale:1.1, warpDetail:3, warpDrift:0.35,
     grain:0.15, grainSize:1, grainMid:0.6, vignette:0.10, contrast:1.02,
     brightness:0, saturation:0.95, posterize:0,
-    animAmp:0.03, animBreath:0.18, animSpin:0, animDur:16,
+    animAmp:0.03, animBreath:0.18, animSpin:0, animPulse:0, animTurn:0, animDur:16,
     stops:[
       {hex:'#F6F5F1', x:0.16, y:0.94, r:0.88, st:2.6, ang:35, fall:0.65, amp:1.30},
       {hex:'#D8C4A0', x:0.94, y:0.04, r:0.52, st:1.7, ang:-25, fall:0.95, amp:1.10},
       {hex:'#2E3A36', x:0.58, y:0.60, r:0.55, st:2.1, ang:35, fall:1.00, amp:0.80}]}},
 
 {n:'Aurora', d:'Flowing bands over night blue',
- s:{mode:0, base:'#04070E', baseW:0.75, spread:1.0, falloff:2.6, angle:0,
+ s:{mode:0, base:'#04070E', baseW:0.75, spread:1.0, falloff:2.6, angle:0, stretch:1,
     waveAmp:0, waveFreq:3, warpAmt:0.20, warpScale:0.9, warpDetail:3, warpDrift:0.5,
     grain:0.07, grainSize:1, grainMid:0.55, vignette:0.25, contrast:1.06,
     brightness:0, saturation:1.15, posterize:0,
-    animAmp:0.04, animBreath:0.30, animSpin:0, animDur:14,
+    animAmp:0.04, animBreath:0.30, animSpin:0, animPulse:0, animTurn:0, animDur:14,
     stops:[
       {hex:'#7DF9C4', x:0.40, y:0.30, r:0.42, st:3.0, ang:12, fall:0.90, amp:1.15},
       {hex:'#3B6FE0', x:0.62, y:0.48, r:0.45, st:2.6, ang:-8, fall:0.90, amp:1.05},
@@ -602,11 +664,11 @@ const LOOKS = [
       {hex:'#071427', x:0.50, y:0.86, r:0.75, st:2.0, ang:0,  fall:0.70, amp:1.30}]}},
 
 {n:'Sunrise', d:'Warm layers, soft transition',
- s:{mode:1, base:'#1A0E12', baseW:0.55, spread:1.15, falloff:2.6, angle:90,
+ s:{mode:1, base:'#1A0E12', baseW:0.55, spread:1.15, falloff:2.6, angle:90, stretch:1,
     waveAmp:0, waveFreq:3, warpAmt:0.10, warpScale:1.0, warpDetail:2, warpDrift:0.3,
     grain:0.06, grainSize:1, grainMid:0.5, vignette:0.14, contrast:1.03,
     brightness:0, saturation:1.08, posterize:0,
-    animAmp:0.02, animBreath:0.15, animSpin:0, animDur:16,
+    animAmp:0.02, animBreath:0.15, animSpin:0, animPulse:0, animTurn:0, animDur:16,
     stops:[
       {hex:'#FFD9A0', x:0.50, y:0.92, r:0.55, st:1, ang:0, fall:0.85, amp:1.20},
       {hex:'#E8724C', x:0.50, y:0.62, r:0.48, st:1, ang:0, fall:1.00, amp:1.05},
@@ -614,25 +676,120 @@ const LOOKS = [
       {hex:'#241026', x:0.50, y:0.06, r:0.55, st:1, ang:0, fall:0.90, amp:1.00}]}},
 
 {n:'Paper', d:'Almost white — for light layouts',
- s:{mode:0, base:'#F5F3EE', baseW:1.3, spread:1.2, falloff:2.0, angle:0,
+ s:{mode:0, base:'#F5F3EE', baseW:1.3, spread:1.2, falloff:2.0, angle:0, stretch:1,
     waveAmp:0, waveFreq:3, warpAmt:0.08, warpScale:0.9, warpDetail:2, warpDrift:0.25,
     grain:0.05, grainSize:1, grainMid:0.35, vignette:0.10, contrast:1.0,
     brightness:0, saturation:0.9, posterize:0,
-    animAmp:0.02, animBreath:0.12, animSpin:0, animDur:20,
+    animAmp:0.02, animBreath:0.12, animSpin:0, animPulse:0, animTurn:0, animDur:20,
     stops:[
       {hex:'#FFFFFF', x:0.30, y:0.24, r:0.60, st:1.5, ang:20, fall:0.70, amp:1.10},
       {hex:'#E6E1D6', x:0.78, y:0.72, r:0.55, st:1.8, ang:-15, fall:0.80, amp:0.85},
       {hex:'#D8D2C4', x:0.10, y:0.94, r:0.45, st:2.2, ang:10, fall:0.90, amp:0.70}]}},
 
 {n:'Spotlight', d:'A single cone in the dark',
- s:{mode:0, base:'#080809', baseW:1.0, spread:0.85, falloff:5.0, angle:0,
+ s:{mode:0, base:'#080809', baseW:1.0, spread:0.85, falloff:5.0, angle:0, stretch:1,
     waveAmp:0, waveFreq:3, warpAmt:0.06, warpScale:1.2, warpDetail:2, warpDrift:0.3,
     grain:0.09, grainSize:1, grainMid:0.65, vignette:0.38, contrast:1.10,
     brightness:0, saturation:1, posterize:0,
-    animAmp:0.02, animBreath:0.20, animSpin:0, animDur:12,
+    animAmp:0.02, animBreath:0.20, animSpin:0, animPulse:0, animTurn:0, animDur:12,
     stops:[
       {hex:'#FFFFFF', x:0.50, y:0.38, r:0.40, st:1.15, ang:0, fall:1.20, amp:1.60},
-      {hex:'#8A90A0', x:0.50, y:0.46, r:0.75, st:1.30, ang:0, fall:0.60, amp:0.55}]}}
+      {hex:'#8A90A0', x:0.50, y:0.46, r:0.75, st:1.30, ang:0, fall:0.60, amp:0.55}]}},
+
+/* ── From the reference sheets ───────────────────────────────────────────
+   These lean on the ellipse: `st` above 1 widens a point, below 1 makes it
+   tall, `ang` turns it, and pulse / turn move that shape over the loop. A
+   very wide, very tight point is a horizon line — that is the poster trick. */
+
+{n:'Heat Map', d:'Thermal blobs — red core, cold edge',
+ /* Stacked points sharing one centre. Every disc is at full weight in the
+    middle, so the core only reads red if red carries far more strength than
+    the wide cold ones — that is what makes the rings, not the reach alone. */
+ s:{mode:0, base:'#04070F', baseW:0.45, spread:1.0, falloff:3.2, angle:0, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.20, warpScale:1.3, warpDetail:3, warpDrift:0.40,
+    grain:0.05, grainSize:1, grainMid:0.5, vignette:0.22, contrast:1.12,
+    brightness:0, saturation:1.30, posterize:0,
+    animAmp:0.035, animBreath:0.35, animSpin:0, animPulse:0.40, animTurn:0, animDur:12,
+    stops:[
+      {hex:'#1E6BFF', x:0.46, y:0.52, r:1.10, st:1.35, ang:20, fall:0.40, amp:0.42},
+      {hex:'#22C55E', x:0.46, y:0.52, r:0.66, st:1.30, ang:20, fall:0.60, amp:0.90},
+      {hex:'#FFD400', x:0.44, y:0.50, r:0.34, st:1.25, ang:15, fall:1.10, amp:1.70},
+      {hex:'#FF2A00', x:0.43, y:0.49, r:0.18, st:1.20, ang:10, fall:1.10, amp:4.00},
+      {hex:'#FF7A00', x:0.74, y:0.26, r:0.20, st:1.80, ang:-30, fall:1.40, amp:2.20}]}},
+
+{n:'Greydient', d:'Japanese fade — crow black to dough',
+ s:{mode:1, base:'#000B00', baseW:0, spread:1.25, falloff:2.2, angle:90, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.04, warpScale:0.8, warpDetail:2, warpDrift:0.20,
+    grain:0.17, grainSize:1.5, grainMid:0.55, vignette:0.06, contrast:1.02,
+    brightness:0, saturation:0.95, posterize:0,
+    animAmp:0.01, animBreath:0.08, animSpin:0, animPulse:0, animTurn:0, animDur:20,
+    stops:[
+      {hex:'#FBFAF5', x:0.50, y:0.96, r:0.60, st:1, ang:0, fall:0.85, amp:1.30},
+      {hex:'#C9A48A', x:0.50, y:0.64, r:0.32, st:1, ang:0, fall:1.35, amp:1.15},
+      {hex:'#44617B', x:0.50, y:0.40, r:0.40, st:1, ang:0, fall:1.10, amp:1.00},
+      {hex:'#000B00', x:0.50, y:0.02, r:0.70, st:1, ang:0, fall:0.80, amp:1.40}]}},
+
+{n:'Poster Dusk', d:'A razor-thin hot horizon under violet',
+ s:{mode:0, base:'#1A1040', baseW:0.70, spread:1.0, falloff:3.0, angle:0, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.03, warpScale:0.7, warpDetail:2, warpDrift:0.20,
+    grain:0.10, grainSize:1, grainMid:0.50, vignette:0.18, contrast:1.08,
+    brightness:0, saturation:1.15, posterize:0,
+    animAmp:0.008, animBreath:0.06, animSpin:0, animPulse:0.18, animTurn:0, animDur:18,
+    stops:[
+      {hex:'#6A4BC4', x:0.50, y:0.16, r:0.95, st:3.0,  ang:0, fall:0.55, amp:1.10},
+      {hex:'#241B5C', x:0.50, y:0.86, r:0.85, st:3.0,  ang:0, fall:0.70, amp:1.05},
+      {hex:'#FF4E6B', x:0.50, y:0.52, r:0.30, st:9.0,  ang:0, fall:2.20, amp:2.10},
+      {hex:'#FFE49A', x:0.50, y:0.505,r:0.16, st:12.0, ang:0, fall:2.80, amp:2.60}]}},
+
+{n:'Riso Jet', d:'Jet colours, heavy warp, hard steps',
+ s:{mode:0, base:'#0A0A0A', baseW:0.18, spread:1.30, falloff:1.7, angle:0, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.80, warpScale:2.2, warpDetail:4, warpDrift:0.60,
+    grain:0.08, grainSize:1, grainMid:0.55, vignette:0.08, contrast:1.10,
+    brightness:0, saturation:1.55, posterize:8,
+    animAmp:0.06, animBreath:0.30, animSpin:0, animPulse:0.55, animTurn:0, animDur:18,
+    stops:[
+      {hex:'#FF2D1F', x:0.22, y:0.24, r:0.70, st:2.20, ang:25,  fall:0.85, amp:1.15},
+      {hex:'#FFE01B', x:0.74, y:0.32, r:0.62, st:0.55, ang:70,  fall:0.90, amp:1.10},
+      {hex:'#2BC24A', x:0.30, y:0.74, r:0.66, st:1.90, ang:-35, fall:0.90, amp:1.10},
+      {hex:'#1E7BE0', x:0.80, y:0.84, r:0.70, st:0.60, ang:110, fall:0.85, amp:1.15}]}},
+
+{n:'Ridge Light', d:'Grainy ridges — alpine dusk',
+ s:{mode:0, base:'#120018', baseW:0.85, spread:1.10, falloff:2.4, angle:0, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.34, warpScale:1.1, warpDetail:4, warpDrift:0.45,
+    grain:0.26, grainSize:1, grainMid:0.62, vignette:0.30, contrast:1.10,
+    brightness:-0.02, saturation:1.38, posterize:0,
+    animAmp:0.03, animBreath:0.22, animSpin:0, animPulse:0.30, animTurn:0, animDur:16,
+    stops:[
+      {hex:'#B2F35A', x:0.44, y:0.46, r:0.36, st:2.60, ang:20,  fall:1.90, amp:2.10},
+      {hex:'#FF7A2F', x:0.62, y:0.74, r:0.44, st:2.40, ang:-15, fall:1.50, amp:1.90},
+      {hex:'#A24BE0', x:0.28, y:0.28, r:0.62, st:2.00, ang:10,  fall:0.85, amp:1.20},
+      {hex:'#2A0A38', x:0.50, y:0.99, r:0.72, st:3.00, ang:0,   fall:0.90, amp:1.40}]}},
+
+{n:'Ember Sweep', d:'Wide ovals, ember over teal',
+ s:{mode:0, base:'#100604', baseW:0.25, spread:1.20, falloff:2.2, angle:0, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.16, warpScale:0.9, warpDetail:3, warpDrift:0.35,
+    grain:0.20, grainSize:1, grainMid:0.55, vignette:0.14, contrast:1.08,
+    brightness:0, saturation:1.30, posterize:0,
+    animAmp:0.03, animBreath:0.18, animSpin:0, animPulse:0.35, animTurn:1, animDur:20,
+    stops:[
+      {hex:'#F4B14A', x:0.12, y:0.12, r:0.52, st:2.80, ang:35, fall:1.40, amp:1.70},
+      {hex:'#E8391B', x:0.64, y:0.36, r:0.54, st:3.20, ang:35, fall:1.60, amp:2.10},
+      {hex:'#0F5F63', x:0.26, y:0.66, r:0.46, st:3.40, ang:35, fall:1.90, amp:2.00},
+      {hex:'#180806', x:0.88, y:0.94, r:0.60, st:3.00, ang:35, fall:1.20, amp:1.60}]}},
+
+{n:'Ice Fold', d:'One cold fold, glass edge',
+ s:{mode:0, base:'#00081C', baseW:0.45, spread:1.15, falloff:2.6, angle:0, stretch:1,
+    waveAmp:0, waveFreq:3, warpAmt:0.08, warpScale:0.8, warpDetail:2, warpDrift:0.25,
+    grain:0.05, grainSize:1, grainMid:0.45, vignette:0.10, contrast:1.06,
+    brightness:0, saturation:1.10, posterize:0,
+    animAmp:0.02, animBreath:0.14, animSpin:0, animPulse:0.25, animTurn:0, animDur:22,
+    stops:[
+      {hex:'#EAF8FF', x:0.06, y:0.96, r:0.52, st:1.60, ang:40, fall:1.10, amp:2.60},
+      /* A very thin, very wide point along the fold — that is the glass edge */
+      {hex:'#EAF8FF', x:0.30, y:0.78, r:0.09, st:6.00, ang:40, fall:2.60, amp:2.20},
+      {hex:'#2A8CFF', x:0.36, y:0.68, r:0.34, st:2.60, ang:40, fall:1.70, amp:1.50},
+      {hex:'#0A2F8C', x:0.70, y:0.44, r:0.70, st:2.20, ang:40, fall:0.80, amp:1.10},
+      {hex:'#001233', x:0.30, y:0.10, r:0.80, st:1.80, ang:40, fall:0.70, amp:1.20}]}}
 ];
 
 const FORMATS = [
@@ -662,42 +819,45 @@ const MODES = ['Mesh','Linear','Radial','Conic','Waves','Spiral'];
    objects on read, so sharing them between the cards is safe. */
 const CARD_S = {mode:1, spread:1.15, falloff:2.6, angle:90, waveAmp:0, waveFreq:3,
   warpAmt:0.10, warpScale:1.0, warpDetail:2, warpDrift:0.30,
-  grain:0.06, grainSize:1, grainMid:0.50, vignette:0.14, contrast:1.03,
-  brightness:0, saturation:1.08, posterize:0,
-  animAmp:0.015, animBreath:0.10, animSpin:0, animDur:16};
+  grain:0.06, grainSize:1, grainMid:0.50, vignette:0.12, contrast:1.07,
+  brightness:0, saturation:1.16, posterize:0,
+  animAmp:0.015, animBreath:0.10, animSpin:0, animPulse:0, animTurn:0, animDur:16};
 
+/* The ground carries no weight on the cards (baseW 0) — the four colours make
+   the whole picture. The accent, colour 2, sits in a tighter band with more
+   strength so it reads as an accent and not as a wash. */
 const CARD_GEOM = [
-  {x:0.50, y:0.92, r:0.55, st:1, ang:0, fall:0.85, amp:1.20},
-  {x:0.50, y:0.62, r:0.48, st:1, ang:0, fall:1.00, amp:1.05},
-  {x:0.50, y:0.36, r:0.50, st:1, ang:0, fall:1.00, amp:0.95},
-  {x:0.50, y:0.06, r:0.55, st:1, ang:0, fall:0.90, amp:1.00}];
+  {x:0.50, y:0.94, r:0.58, st:1, ang:0, fall:0.80, amp:1.20},
+  {x:0.50, y:0.62, r:0.40, st:1, ang:0, fall:1.40, amp:1.50},
+  {x:0.50, y:0.34, r:0.50, st:1, ang:0, fall:1.00, amp:0.95},
+  {x:0.50, y:0.04, r:0.60, st:1, ang:0, fall:0.85, amp:1.10}];
 
 const SHOWCASE = [
-{name:'flohack', base:'#0B0818', baseW:0.40,
+{name:'flohack', base:'#0B0818', baseW:0,
  colours:[{n:'chalk',hex:'#F3EEE8'},{n:'acid',hex:'#B2F332'},{n:'steel',hex:'#6787AF'},{n:'ink',hex:'#19123D'}],
  s: CARD_S, geom: CARD_GEOM},
 
-{name:'accilium', base:'#04161D', baseW:0.55,
+{name:'accilium', base:'#04161D', baseW:0,
  colours:[{n:'mint',hex:'#54DBC0'},{n:'petrol',hex:'#00677F'},{n:'berry',hex:'#990F4F'},{n:'deep',hex:'#073C4E'}],
  s: CARD_S, geom: CARD_GEOM},
 
-{name:'Ceramic', base:'#141110', baseW:0.55,
+{name:'Ceramic', base:'#141110', baseW:0,
  colours:[{n:'Bone',hex:'#F4EFE6'},{n:'Clay',hex:'#C96F4A'},{n:'Moss',hex:'#8A9A5B'},{n:'Espresso',hex:'#2E2A26'}],
  s: CARD_S, geom: CARD_GEOM},
 
-{name:'Signal', base:'#000000', baseW:0.24,
+{name:'Signal', base:'#000000', baseW:0,
  colours:[{n:'Chalk',hex:'#E8E4DC'},{n:'Signal',hex:'#FF3B1F'},{n:'Slate',hex:'#4A5560'},{n:'Carbon',hex:'#0B0B0C'}],
  s: CARD_S, geom: CARD_GEOM},
 
-{name:'Tidal', base:'#02141B', baseW:0.60,
+{name:'Tidal', base:'#02141B', baseW:0,
  colours:[{n:'Sand Dollar',hex:'#F2E8CF'},{n:'Tidal',hex:'#0E7C7B'},{n:'Rust',hex:'#A44A3F'},{n:'Abyss',hex:'#04202B'}],
  s: CARD_S, geom: CARD_GEOM},
 
-{name:'Neon Dusk', base:'#0A0618', baseW:0.42,
+{name:'Neon Dusk', base:'#0A0618', baseW:0,
  colours:[{n:'Ice',hex:'#E6F1FF'},{n:'Ultra',hex:'#6C4BFF'},{n:'Bloom',hex:'#FF5CA8'},{n:'Indigo',hex:'#120C2E'}],
  s: CARD_S, geom: CARD_GEOM},
 
-{name:'Kiln', base:'#140C09', baseW:0.45,
+{name:'Kiln', base:'#140C09', baseW:0,
  colours:[{n:'Amber',hex:'#F5C77E'},{n:'Ember',hex:'#E2703A'},{n:'Verdigris',hex:'#6B8F71'},{n:'Char',hex:'#1C1210'}],
  s: CARD_S, geom: CARD_GEOM}
 ];
@@ -714,7 +874,7 @@ const mkStop = o => Object.assign({}, STOP_DEF, o);
 
 const DEFAULT = () => ({
   w:1080, h:1350, radius:0,
-  mode:0, angle:0, spread:0.62, falloff:7,
+  mode:0, angle:0, spread:0.62, stretch:1, falloff:7,
   waveAmp:0, waveFreq:3,
   base:'#0B1412', baseW:0.9,
   stops:[
@@ -726,7 +886,10 @@ const DEFAULT = () => ({
   warpAmt:0.22, warpScale:1.6, warpDetail:3, warpDrift:0.45,
   grain:0.10, grainSize:1, grainMid:0.55, grainAnim:1,
   vignette:0.12, contrast:1, brightness:0, saturation:1, posterize:0,
-  animAmp:0.10, animBreath:0.25, animSpin:0, animDur:8,
+  animAmp:0.10, animBreath:0.25, animSpin:0, animPulse:0, animTurn:0, animDur:8,
+  fx:0, fxScale:8, fxSteps:4, fxAngle:15, fxAmount:1,
+  imgFit:0, imgScale:1, imgX:0, imgY:0, imgBlend:1, imgOpacity:1,
+  gradOpacity:1, tintCol:'#FF3B1F', tintBlend:1, tintOpacity:0,
   seed:1337
 });
 
@@ -778,6 +941,7 @@ uniform float uBaseW;
 uniform int   uMode;
 uniform float uAngle;
 uniform float uSpread;
+uniform float uStretch;
 uniform float uFalloff;
 uniform float uWaveAmp, uWaveFreq;
 uniform float uWarpAmt, uWarpScale, uWarpDrift;
@@ -786,6 +950,24 @@ uniform float uGrain, uGrainSize, uGrainMid, uGrainSeed;
 uniform float uVignette, uContrast, uBright, uSat, uPoster;
 uniform float uPhase;
 uniform float uSeed;
+uniform int   uEffect;   /* 0 none · 1 dither · 2 ascii · 3 halftone
+                            4 crosshatch · 5 pixelate · 6 rgb split */
+uniform float uFxScale, uFxSteps, uFxAngle, uFxAmount;
+uniform sampler2D uGlyphs;
+uniform float uGlyphN;
+/* Layer stack, bottom up: the ground colour, the gradient, a photo, a tint.
+   uImgOp is 0 whenever no photo is loaded, so the sampler is never read. */
+uniform sampler2D uImg;
+uniform float uImgAspect;
+uniform int   uImgFit;      /* 0 cover · 1 contain · 2 fill */
+uniform float uImgScale;
+uniform vec2  uImgOff;
+uniform int   uImgBlend;
+uniform float uImgOp;
+uniform float uGradOp;
+uniform vec3  uTint;        /* sRGB, not OKLab — it never enters the blend */
+uniform int   uTintBlend;
+uniform float uTintOp;
 
 /* --- Hash & simplex noise --------------------------------- */
 /* Dave Hoskins' hash — keeps intermediates small so large pixel
@@ -876,21 +1058,19 @@ float field(vec2 pp, vec2 dir, float ca, float sa){
   return s;
 }
 
-void main(){
-  vec2 uv = gl_FragCoord.xy / uRes;
-  uv.y = 1.0 - uv.y;
-  vec2 p = vec2(uv.x * uAspect, uv.y);
+/* The domain warp offset at a position. Time travels a closed circle, so it
+   loops. Held apart from p so each point can take its own share of it
+   (uPB[i].w) and so a cell effect can sample it at the cell centre. */
+vec2 warpAt(vec2 p){
+  if (uWarpAmt <= 0.0005) return vec2(0.0);
+  vec2 drift = uWarpDrift * vec2(cos(TAU*uPhase), sin(TAU*uPhase));
+  vec2 q = p * uWarpScale + drift + uSeed;
+  vec2 w = vec2(fbm(q), fbm(q + vec2(37.2, 11.7)));
+  return uWarpAmt * w * 0.5;
+}
 
-  /* Domain warp — time travels a closed circle, so it loops. The offset is
-     kept apart from p so each point can take its own share of it (uPB[i].w). */
-  vec2 warpOff = vec2(0.0);
-  if (uWarpAmt > 0.0005){
-    vec2 drift = uWarpDrift * vec2(cos(TAU*uPhase), sin(TAU*uPhase));
-    vec2 q = p * uWarpScale + drift + uSeed;
-    vec2 w = vec2(fbm(q), fbm(q + vec2(37.2, 11.7)));
-    warpOff = uWarpAmt * w * 0.5;
-  }
-
+/* The blended gradient at a position, in sRGB. */
+vec3 blend(vec2 p, vec2 warpOff){
   float ca = cos(uAngle), sa = sin(uAngle);
   vec2 dir = vec2(ca, sa);
   bool oneD = (uMode != 0);
@@ -922,7 +1102,7 @@ void main(){
       vec2 dv = pw - vec2(A.x * uAspect, A.y);
       float pc = cos(B.x), ps = sin(B.x);
       vec2 dr = vec2(dv.x * pc + dv.y * ps, -dv.x * ps + dv.y * pc);
-      float st = max(A.w, 0.05);
+      float st = max(A.w * uStretch, 0.05);
       dr.x /= st; dr.y *= st;
       d = length(dr);
     }
@@ -931,14 +1111,50 @@ void main(){
     acc  += uCol[i] * w;
     wsum += w;
   }
+  return oklab2srgb(acc / wsum);
+}
 
-  vec3 lab = acc / wsum;
-  vec3 col = oklab2srgb(lab);
+/* Separable blend modes, on straight sRGB, following the W3C compositing
+   formulas. b is what is already there, s is the layer going on top. */
+vec3 blendPix(vec3 b, vec3 s, int m){
+  if (m == 1) return b * s;                                  /* multiply */
+  if (m == 2) return b + s - b * s;                          /* screen */
+  if (m == 3) return mix(2.0 * b * s,                        /* overlay */
+                         1.0 - 2.0 * (1.0 - b) * (1.0 - s), step(0.5, b));
+  if (m == 4){                                               /* soft light */
+    vec3 d = mix(sqrt(b), ((16.0 * b - 12.0) * b + 4.0) * b, step(b, vec3(0.25)));
+    return mix(b + (2.0 * s - 1.0) * (d - b),
+               b - (1.0 - 2.0 * s) * b * (1.0 - b), step(s, vec3(0.5)));
+  }
+  if (m == 5) return abs(b - s);                             /* difference */
+  if (m == 6){                                               /* luminosity */
+    float d = dot(s, vec3(0.2126, 0.7152, 0.0722)) - dot(b, vec3(0.2126, 0.7152, 0.0722));
+    return b + d;
+  }
+  return s;                                                  /* normal */
+}
 
-  /* Look */
+/* The photo, fitted to the canvas. The out parameter is 0 outside the image,
+   which only happens in contain — there the layers below stay visible. */
+vec3 photoAt(vec2 uv, out float a){
+  vec2 k;
+  float ca = uAspect, ia = max(uImgAspect, 0.01);
+  if (uImgFit == 2)      k = vec2(1.0);
+  else if (uImgFit == 1) k = (ca > ia) ? vec2(ca / ia, 1.0) : vec2(1.0, ia / ca);
+  else                   k = (ca > ia) ? vec2(1.0, ia / ca) : vec2(ca / ia, 1.0);
+  k /= max(uImgScale, 0.05);
+  vec2 t = (uv - 0.5) * k + 0.5 + uImgOff;
+  vec2 in2 = step(vec2(0.0), t) * step(t, vec2(1.0));
+  a = (uImgFit == 1) ? in2.x * in2.y : 1.0;
+  return texture2D(uImg, clamp(t, 0.0, 1.0)).rgb;
+}
+
+/* Look and lens — everything acting on the finished colour except the grain,
+   which stays on top so it sits over the effect layer rather than under it. */
+vec3 tone(vec3 col, vec2 uv){
   if (abs(uSat - 1.0) > 0.001){
-    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
-    col = clamp(mix(vec3(lum), col, uSat), 0.0, 1.0);
+    float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col = clamp(mix(vec3(l), col, uSat), 0.0, 1.0);
   }
   col = clamp((col - 0.5) * uContrast + 0.5 + uBright, 0.0, 1.0);
 
@@ -951,6 +1167,119 @@ void main(){
   if (uPoster >= 2.0){
     col = floor(col * uPoster + 0.5) / uPoster;
   }
+  return col;
+}
+
+/* Stacks the layers over a gradient colour and grades the result. Tone runs
+   last on purpose: contrast, saturation and posterise then work on the whole
+   picture, photo included, not just on the gradient. */
+vec3 composite(vec3 grad, vec2 uv){
+  vec3 col = mix(oklab2srgb(uBase), grad, clamp(uGradOp, 0.0, 1.0));
+  if (uImgOp > 0.001){
+    float a;
+    vec3 ph = photoAt(uv, a);
+    col = mix(col, clamp(blendPix(col, ph, uImgBlend), 0.0, 1.0), uImgOp * a);
+  }
+  if (uTintOp > 0.001)
+    col = mix(col, clamp(blendPix(col, uTint, uTintBlend), 0.0, 1.0), uTintOp);
+  return tone(col, uv);
+}
+
+/* The finished image at a position — this is what an effect samples. */
+vec3 scene(vec2 p, vec2 uv){ return composite(blend(p, warpAt(p)), uv); }
+
+/* ── Effect layer ──────────────────────────────────────────────────────
+   Ordered dither matrix, 8x8, built recursively from a 2x2 — arithmetic
+   only, because GLSL ES 1.00 has no bitwise operators. */
+float bayer2(vec2 a){ a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
+float bayer4(vec2 a){ return bayer2(0.5 * a) * 0.25 + bayer2(a); }
+float bayer8(vec2 a){ return bayer4(0.5 * a) * 0.25 + bayer2(a); }
+
+float lum709(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+/* The centre of the cell this fragment falls in, as a position; plus where
+   the fragment sits inside the cell and the centre's uv, for the vignette.
+   Cells are square in render pixels and scale with uPx, so the grid keeps
+   the same relative size from preview to a 4x export. */
+vec2 cellAt(float cell, float ang, out vec2 inCell, out vec2 cuv){
+  float c = cos(ang), s = sin(ang);
+  vec2 fr = vec2(c * gl_FragCoord.x + s * gl_FragCoord.y,
+                -s * gl_FragCoord.x + c * gl_FragCoord.y);
+  vec2 ci = floor(fr / cell);
+  inCell = fr / cell - ci;
+  vec2 mid = (ci + 0.5) * cell;
+  vec2 back = vec2(c * mid.x - s * mid.y, s * mid.x + c * mid.y);
+  vec2 u = back / uRes;
+  u.y = 1.0 - u.y;
+  cuv = u;
+  return vec2(u.x * uAspect, u.y);
+}
+
+vec3 effect(vec2 p, vec2 uv){
+  float cell = max(uFxScale * uPx, 2.0);
+  float q    = max(uFxSteps, 2.0) - 1.0;
+  vec3  base = scene(p, uv);
+  vec3  fx   = base;
+  vec2  ic, cuv;
+
+  if (uEffect == 1){                    /* ordered dither, per channel */
+    float b = bayer8(floor(gl_FragCoord.xy / cell));
+    fx = floor(base * q + b) / q;
+
+  } else if (uEffect == 2){             /* ascii — a glyph per cell */
+    vec2 pc = cellAt(cell, 0.0, ic, cuv);
+    vec3 cc = scene(pc, cuv);
+    float l  = clamp(lum709(cc), 0.0, 1.0);
+    /* The ramp starts just above zero, so only near-black cells stay empty,
+       and the curve favours the mid glyphs — a flat mapping reads as mush. */
+    float gi = floor(clamp(0.06 + 0.93 * pow(l, 0.65), 0.0, 0.999) * uGlyphN);
+    float m  = texture2D(uGlyphs, vec2((gi + ic.x) / uGlyphN, 1.0 - ic.y)).r;
+    /* Glyph in the cell's hue at full brightness, on a dark ground — that is
+       what makes the characters legible over a dark gradient. */
+    vec3 lit = cc / max(max(cc.r, max(cc.g, cc.b)), 0.06);
+    fx = mix(cc * 0.10, mix(lit, vec3(1.0), 0.12), m);
+
+  } else if (uEffect == 3){             /* halftone dot screen */
+    vec2 pc = cellAt(cell, uFxAngle, ic, cuv);
+    vec3 cc = scene(pc, cuv);
+    float r = sqrt(clamp(lum709(cc), 0.0, 1.0)) * 0.72;
+    float m = smoothstep(r + 1.0/cell, r - 1.0/cell, length(ic - 0.5));
+    fx = mix(cc * 0.10, cc * 1.10, m);
+
+  } else if (uEffect == 4){             /* crosshatch — darker means denser */
+    vec2 pc = cellAt(cell, 0.0, ic, cuv);
+    vec3 cc = scene(pc, cuv);
+    float l = clamp(lum709(cc), 0.0, 1.0);
+    float ink = 0.0;
+    for (int k = 0; k < 4; k++){
+      if (l < 1.0 - (float(k) + 1.0) * 0.22){
+        float a = uFxAngle + float(k) * 0.7854;
+        float v = cos(a) * gl_FragCoord.x + sin(a) * gl_FragCoord.y;
+        ink = max(ink, step(fract(v / cell), 0.30));
+      }
+    }
+    fx = mix(cc * 1.06, cc * 0.08, ink);
+
+  } else if (uEffect == 5){             /* pixelate, quantised to steps */
+    vec2 pc = cellAt(cell, 0.0, ic, cuv);
+    fx = floor(scene(pc, cuv) * q + 0.5) / q;
+
+  } else if (uEffect == 6){             /* rgb split — three taps of the stack */
+    vec2 off  = vec2(cos(uFxAngle), sin(uFxAngle)) * (uFxScale / uRes.y);
+    vec2 offu = off / vec2(uAspect, 1.0);
+    fx = vec3(scene(p + off, uv + offu).r,
+              base.g,
+              scene(p - off, uv - offu).b);
+  }
+  return mix(base, fx, uFxAmount);
+}
+
+void main(){
+  vec2 uv = gl_FragCoord.xy / uRes;
+  uv.y = 1.0 - uv.y;
+  vec2 p = vec2(uv.x * uAspect, uv.y);
+
+  vec3 col = (uEffect == 0) ? scene(p, uv) : effect(p, uv);
 
   /* Grain — cell never below one render pixel, otherwise moiré */
   if (uGrain > 0.0005){
@@ -992,10 +1321,100 @@ gl.enableVertexAttribArray(loc);
 gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
 const U = {};
-['uRes','uPx','uAspect','uCount','uCol','uPA','uPB','uBase','uBaseW','uMode','uAngle','uSpread',
+['uRes','uPx','uAspect','uCount','uCol','uPA','uPB','uBase','uBaseW','uMode','uAngle','uSpread','uStretch',
  'uFalloff','uWaveAmp','uWaveFreq','uWarpAmt','uWarpScale','uWarpDrift','uWarpDetail','uGrain',
- 'uGrainSize','uGrainMid','uGrainSeed','uVignette','uContrast','uBright','uSat','uPoster','uPhase','uSeed']
+ 'uGrainSize','uGrainMid','uGrainSeed','uVignette','uContrast','uBright','uSat','uPoster','uPhase','uSeed',
+ 'uEffect','uFxScale','uFxSteps','uFxAngle','uFxAmount','uGlyphs','uGlyphN',
+ 'uImg','uImgAspect','uImgFit','uImgScale','uImgOff','uImgBlend','uImgOp',
+ 'uGradOp','uTint','uTintBlend','uTintOp']
   .forEach(k => U[k] = gl.getUniformLocation(prog, k));
+
+/* ══════════════════════════════════════════════════════════════
+   ASCII glyphs — a strip drawn once with the interface's own monospace
+   font and handed to the shader as a texture. Ten steps from empty to
+   solid; the effect picks one per cell by luminance. Built on first draw
+   because it needs MONO, which is declared further down.
+   ══════════════════════════════════════════════════════════════ */
+/* ── The photo layer ───────────────────────────────────────────────────
+   One texture, replaced on every load. Non-power-of-two, so LINEAR and
+   CLAMP_TO_EDGE without mipmaps — the same deal as the glyph strip. A blank
+   1x1 stands in while nothing is loaded, so the sampler is always bound. */
+const BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'soft light', 'difference', 'luminosity'];
+const FITS   = ['cover', 'contain', 'fill'];
+let imgTex = null, imgAspect = 1, imgName = '', blankTex = null;
+
+function mkTex(){
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return t;
+}
+function ensureBlank(){
+  if (blankTex) return;
+  blankTex = mkTex();
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                new Uint8Array([255, 255, 255, 255]));
+}
+/* Oversized photos are drawn down to the GPU limit first — a 8000 px phone
+   shot would otherwise fail the upload on some drivers. */
+function setPhoto(img, name){
+  const lim = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096, 4096);
+  let src = img;
+  if (img.naturalWidth > lim || img.naturalHeight > lim){
+    const k = lim / Math.max(img.naturalWidth, img.naturalHeight);
+    const c2 = document.createElement('canvas');
+    c2.width  = Math.max(1, Math.round(img.naturalWidth  * k));
+    c2.height = Math.max(1, Math.round(img.naturalHeight * k));
+    c2.getContext('2d').drawImage(img, 0, 0, c2.width, c2.height);
+    src = c2;
+  }
+  if (imgTex) gl.deleteTexture(imgTex);
+  imgTex = mkTex();
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  imgAspect = img.naturalWidth / Math.max(img.naturalHeight, 1);
+  imgName = name || 'image';
+  if (S.imgOpacity <= 0.001) S.imgOpacity = 1;
+  syncImage();
+  toast(imgName + ' — ' + img.naturalWidth + ' × ' + img.naturalHeight);
+}
+function clearPhoto(){
+  if (imgTex){ gl.deleteTexture(imgTex); imgTex = null; }
+  imgName = '';
+  syncImage();
+}
+function loadPhotoFile(file){
+  if (!file || !/^image\//.test(file.type)){ toast('Not an image'); return; }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => { setPhoto(img, file.name); URL.revokeObjectURL(url); };
+  img.onerror = () => { toast('Could not read that image'); URL.revokeObjectURL(url); };
+  img.src = url;
+}
+
+const RAMP = ' .:-=+*#%@';
+let glyphTex = null;
+function ensureGlyphs(){
+  if (glyphTex) return;
+  const S = 32, c2 = document.createElement('canvas');
+  c2.width = S * RAMP.length; c2.height = S;
+  const g = c2.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, c2.width, c2.height);
+  g.fillStyle = '#fff';
+  g.font = '700 ' + Math.round(S * 0.86) + 'px ' + MONO;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i < RAMP.length; i++) g.fillText(RAMP[i], i*S + S/2, S/2 + 1);
+  glyphTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, glyphTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c2);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
 
 /* ══════════════════════════════════════════════════════════════
    Animated point positions (perfect loop)
@@ -1011,7 +1430,8 @@ function motionFor(i){
     fy: 1 + Math.floor(r() * 2),
     px: r(), py: r(),
     ax: 0.6 + r() * 0.8, ay: 0.6 + r() * 0.8,
-    fr: 1 + Math.floor(r() * 2), pr: r()
+    fr: 1 + Math.floor(r() * 2), pr: r(),
+    fs: 1 + Math.floor(r() * 2), ps: r()
   };
 }
 /* Each point takes its own share of the global drift, breathing and rotation
@@ -1035,7 +1455,17 @@ function animatedPoints(ph){
     let r = st.r;
     const br = S.animBreath * st.mBreath;
     if (br > 0) r *= 1 + br * 0.5 * Math.sin(TAU * (m.fr * ph + m.pr));
-    return {x, y, r, st: st.st, ang: st.ang, fall: st.fall, amp: st.amp, warp: st.warp};
+
+    /* Shape motion: the ellipse pulses between round and stretched, and turns
+       in whole revolutions so the loop still closes. */
+    let sq = st.st;
+    const pu = S.animPulse * st.mBreath;
+    if (pu > 0) sq = Math.max(sq * (1 + pu * 0.6 * Math.sin(TAU * (m.fs * ph + m.ps))), 0.06);
+    let aq = st.ang;
+    const tu = Math.round(S.animTurn) * st.mSpin;
+    if (tu !== 0) aq += tu * ph * 360;
+
+    return {x, y, r, st: sq, ang: aq, fall: st.fall, amp: st.amp, warp: st.warp};
   });
 }
 
@@ -1089,6 +1519,7 @@ function draw(ph, pxScale){
   gl.uniform1i(U.uMode, S.mode);
   gl.uniform1f(U.uAngle, S.angle * Math.PI / 180);
   gl.uniform1f(U.uSpread, S.spread);
+  gl.uniform1f(U.uStretch, S.stretch);
   gl.uniform1f(U.uFalloff, S.falloff);
   gl.uniform1f(U.uWaveAmp, S.waveAmp);
   gl.uniform1f(U.uWaveFreq, S.waveFreq);
@@ -1100,6 +1531,16 @@ function draw(ph, pxScale){
   gl.uniform1f(U.uGrainSize, S.grainSize);
   gl.uniform1f(U.uGrainMid, S.grainMid);
   gl.uniform1f(U.uGrainSeed, S.grainAnim ? (Math.floor(ph * 600) * 7.31) % 97 : 0);
+  ensureGlyphs();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, glyphTex);
+  gl.uniform1i(U.uGlyphs, 0);
+  gl.uniform1f(U.uGlyphN, RAMP.length);
+  gl.uniform1i(U.uEffect, S.fx);
+  gl.uniform1f(U.uFxScale, S.fxScale);
+  gl.uniform1f(U.uFxSteps, S.fxSteps);
+  gl.uniform1f(U.uFxAngle, S.fxAngle * Math.PI / 180);
+  gl.uniform1f(U.uFxAmount, S.fxAmount);
   gl.uniform1f(U.uVignette, S.vignette);
   gl.uniform1f(U.uContrast, S.contrast);
   gl.uniform1f(U.uBright, S.brightness);
@@ -1107,6 +1548,22 @@ function draw(ph, pxScale){
   gl.uniform1f(U.uPoster, S.posterize);
   gl.uniform1f(U.uPhase, ph);
   gl.uniform1f(U.uSeed, (S.seed % 997) * 0.0137);
+  ensureBlank();
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, imgTex || blankTex);
+  gl.uniform1i(U.uImg, 1);
+  gl.uniform1f(U.uImgAspect, imgAspect);
+  gl.uniform1i(U.uImgFit, S.imgFit);
+  gl.uniform1f(U.uImgScale, S.imgScale);
+  gl.uniform2f(U.uImgOff, S.imgX, S.imgY);
+  gl.uniform1i(U.uImgBlend, S.imgBlend);
+  gl.uniform1f(U.uImgOp, imgTex ? S.imgOpacity : 0);
+  gl.uniform1f(U.uGradOp, S.gradOpacity);
+  const tint = hex2rgb(S.tintCol) || [0, 0, 0];   /* already 0-1 */
+  gl.uniform3f(U.uTint, tint[0], tint[1], tint[2]);
+  gl.uniform1i(U.uTintBlend, S.tintBlend);
+  gl.uniform1f(U.uTintOp, S.tintOpacity);
+  gl.activeTexture(gl.TEXTURE0);
 
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
@@ -1187,10 +1644,10 @@ function buildHandles(){
 const POINT_FIELDS = [
   ['x',    'Position X', -0.3, 1.3, 0.005, 3, 'Horizontal — deliberately reaches past the canvas edge'],
   ['y',    'Position Y', -0.3, 1.3, 0.005, 3, 'Vertical — points outside create edge falloffs'],
-  ['st',   'Stretch',   0.25, 4,   0.05, 2, 'Ellipse: wide or tall — 1 is round'],
+  ['st',   'Stretch',   0.25, 12,  0.05, 2, 'Ellipse: wide or tall — 1 is round'],
   ['ang',  'Rotation',  0,    180, 1,    0, 'Direction of the stretch, in degrees'],
   ['fall', 'Edge',      0.3,  3,   0.05, 2, 'Low = far-reaching haze, high = clearly bounded'],
-  ['amp',  'Strength',  0,    2,   0.02, 2, 'How strongly this colour asserts itself']
+  ['amp',  'Strength',  0,    4,   0.02, 2, 'How strongly this colour asserts itself']
 ];
 
 /* Writes a point's values back into its rows — after dragging on the canvas,
@@ -1268,13 +1725,17 @@ document.querySelectorAll('section > h2').forEach(h => {
 
 /* Sliders */
 const SLIDERS = [
-  ['baseW','baseW',2],['angle','angle',0],['spread','spread',2],['falloff','falloff',1],
+  ['baseW','baseW',2],['angle','angle',0],['spread','spread',2],['stretch','stretch',2],['falloff','falloff',1],
   ['waveAmp','waveAmp',3],['waveFreq','waveFreq',1],
   ['warpAmt','warpAmt',2],['warpScale','warpScale',2],['warpDetail','warpDetail',0],['warpDrift','warpDrift',2],
   ['grain','grain',3],['grainSize','grainSize',1],['grainMid','grainMid',2],['grainAnim','grainAnim',0],
   ['vignette','vignette',2],['contrast','contrast',2],['brightness','brightness',3],
   ['saturation','saturation',2],['posterize','posterize',0],
-  ['animAmp','animAmp',3],['animBreath','animBreath',2],['animSpin','animSpin',2],['animDur','animDur',1],
+  ['animAmp','animAmp',3],['animBreath','animBreath',2],['animSpin','animSpin',2],
+  ['animPulse','animPulse',2],['animTurn','animTurn',0],['animDur','animDur',1],
+  ['fxScale','fxScale',0],['fxSteps','fxSteps',0],['fxAngle','fxAngle',0],['fxAmount','fxAmount',2],
+  ['imgOpacity','imgOpacity',2],['gradOpacity','gradOpacity',2],['imgScale','imgScale',2],
+  ['imgX','imgX',3],['imgY','imgY',3],['tintOpacity','tintOpacity',2],
   ['radius','radius',0]
 ];
 /* The form and finish sliders that have a per-point counterpart. The global
@@ -1283,6 +1744,7 @@ const SLIDERS = [
    Ranges match the colour row exactly, so both routes to r and fall agree. */
 const POINT_MAP = {
   spread:     {key:'r',       min:0.05, max:1.6, step:0.01, dec:2},
+  stretch:    {key:'st',      min:0.25, max:12,  step:0.05, dec:2},
   falloff:    {key:'fall',    min:0.3,  max:3,   step:0.05, dec:2},
   warpAmt:    {key:'warp',    min:0,    max:2,   step:0.01, dec:2},
   animAmp:    {key:'mAmp',    min:0,    max:2,   step:0.01, dec:2},
@@ -1383,6 +1845,88 @@ MODES.forEach((m, i) => {
 });
 function syncModeChips(){
   [...modeChips.children].forEach((c, i) => c.classList.toggle('on', i === S.mode));
+}
+
+/* Effect chips. Each effect only reads some of the four sliders, so the rest
+   are dimmed rather than left sitting there doing nothing. */
+const EFFECTS = [
+  {n:'none',       uses:'',                  d:''},
+  {n:'dither',     uses:'scale steps amount', d:'ordered 8×8 matrix — steps sets the levels per channel'},
+  {n:'ascii',      uses:'scale amount',       d:'one glyph per cell, picked by brightness, in the cell\u2019s own colour'},
+  {n:'halftone',   uses:'scale angle amount', d:'dot screen — the dot grows with brightness'},
+  {n:'crosshatch', uses:'scale angle amount', d:'line screen, one layer per darkness step'},
+  {n:'pixelate',   uses:'scale steps amount', d:'cell colour, quantised to steps'},
+  {n:'rgb split',  uses:'scale angle amount', d:'the channels part along the angle — riso misregistration'}
+];
+const fxChips = $('fxChips');
+EFFECTS.forEach((f, i) => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = f.n;
+  b.addEventListener('click', () => { S.fx = i; syncFx(); });
+  fxChips.appendChild(b);
+});
+/* ══════════════════════════════════════════════════════════════
+   Image layer — the photo, the fit, and the two flat colours around it
+   ══════════════════════════════════════════════════════════════ */
+function chipRow(host, names, get, set){
+  host.innerHTML = '';
+  names.forEach((n, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = n;
+    b.addEventListener('click', () => { set(i); });
+    host.appendChild(b);
+  });
+  return () => [...host.children].forEach((c, i) => c.classList.toggle('on', i === get()));
+}
+const syncImgBlend  = chipRow($('imgBlendChips'),  BLENDS, () => S.imgBlend,
+                              i => { S.imgBlend = i; syncImage(); });
+const syncTintBlend = chipRow($('tintBlendChips'), BLENDS, () => S.tintBlend,
+                              i => { S.tintBlend = i; syncImage(); });
+const syncImgFit    = chipRow($('imgFitChips'),    FITS,   () => S.imgFit,
+                              i => { S.imgFit = i; syncImage(); });
+
+function syncImage(){
+  syncImgBlend(); syncTintBlend(); syncImgFit();
+  $('tintCol').value = S.tintCol;
+  $('tintHex').textContent = S.tintCol;
+  const has = !!imgTex;
+  $('s-image').classList.toggle('no-photo', !has);
+  $('imgNote').textContent = has
+    ? imgName + ' · ' + BLENDS[S.imgBlend] + ' over the gradient'
+    : 'drop an image anywhere on the canvas · a preset keeps these settings, not the pixels';
+}
+$('bImgLoad').addEventListener('click', () => $('imgIn').click());
+$('imgIn').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) loadPhotoFile(f);
+  e.target.value = '';
+});
+$('bImgClear').addEventListener('click', () => { clearPhoto(); toast('Photo removed'); });
+$('tintCol').addEventListener('input', e => {
+  S.tintCol = e.target.value.toUpperCase();
+  if (S.tintOpacity <= 0.001){ S.tintOpacity = 0.35; $('tintOpacity')._sync(); }
+  syncImage();
+});
+/* Dropping on the stage is the fast path — no dialog, no file button. */
+['dragenter', 'dragover'].forEach(ev => document.getElementById('stage').addEventListener(ev, e => {
+  e.preventDefault();
+  document.getElementById('stage').classList.add('drop');
+}));
+['dragleave', 'drop'].forEach(ev => document.getElementById('stage').addEventListener(ev, e => {
+  e.preventDefault();
+  document.getElementById('stage').classList.remove('drop');
+}));
+document.getElementById('stage').addEventListener('drop', e => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f){ loadPhotoFile(f); $('s-image').classList.remove('closed'); }
+});
+
+function syncFx(){
+  const f = EFFECTS[S.fx] || EFFECTS[0];
+  [...fxChips.children].forEach((c, i) => c.classList.toggle('on', i === S.fx));
+  [...$('s-layer').querySelectorAll('.row')].forEach(row =>
+    row.classList.toggle('off', f.uses.indexOf(row.dataset.fx) < 0));
+  $('fxNote').textContent = f.d;
 }
 
 /* Format chips */
@@ -1619,6 +2163,25 @@ function shuffleAll(){
   S.animBreath = r() * 0.5;
   S.animSpin   = r() < 0.75 ? 0 : (r() < 0.5 ? -1 : 1);
   S.animDur    = 4 + Math.floor(r() * 13);
+  /* Weighted toward no effect — most shuffles should still be a plain
+     gradient, the layer is the exception rather than the rule. */
+  S.fx        = r() < 0.55 ? 0 : 1 + Math.floor(r() * (EFFECTS.length - 1));
+  S.fxScale   = 3 + Math.floor(r() * 18);
+  S.fxSteps   = 2 + Math.floor(r() * 7);
+  S.fxAngle   = Math.floor(r() * 180);
+  /* The loaded photo itself is never thrown away by a shuffle — it is an
+     asset, not a taste decision. Only how it sits gets rolled. */
+  if (imgTex){
+    S.imgBlend   = Math.floor(r() * BLENDS.length);
+    S.imgOpacity = 0.45 + r() * 0.55;
+    S.gradOpacity = r() < 0.5 ? 1 : 0.45 + r() * 0.55;
+  }
+  S.tintOpacity = r() < 0.7 ? 0 : 0.12 + r() * 0.4;
+  if (S.tintOpacity > 0){
+    S.tintBlend = 1 + Math.floor(r() * (BLENDS.length - 1));
+    S.tintCol   = oklab2hex([0.35 + r() * 0.5, (r() - 0.5) * 0.3, (r() - 0.5) * 0.3]);
+  }
+  S.fxAmount  = 0.6 + r() * 0.4;
   S.stops.forEach(st => {
     st.warp    = r() < 0.4 ? r() * 1.6 : 1;
     st.mAmp    = 0.4 + r() * 1.4;
@@ -1679,7 +2242,8 @@ $('segMode').addEventListener('click', e => {
 function syncAll(){
   SLIDERS.forEach(([id]) => $(id)._sync());
   $('baseCol').value = S.base; $('baseHex').textContent = S.base;
-  syncModeChips(); syncFormat(); buildStops(); buildHandles(); syncLooks(); layout();
+  syncModeChips(); syncFormat(); syncFx(); syncImage();
+  buildStops(); buildHandles(); syncLooks(); layout();
   syncScopeUI();
 }
 
@@ -1852,6 +2416,12 @@ function cssCode(){
     : '';
   const rotated = S.stops.some(st => Math.abs(st.ang) > 0.5 && Math.abs(st.st - 1) > 0.02);
   return (rotated ? '/* CSS cannot express rotated ellipses — rendered unrotated here. */\n' : '') +
+    (S.fx ? '/* The ' + EFFECTS[S.fx].n + ' layer lives in the shader and is not in this CSS.\n' +
+            '   Export as an image if you need it. */\n' : '') +
+    (imgTex ? '/* The photo layer is not in this CSS — add it yourself with a\n' +
+              '   background-image above the gradient, mix-blend-mode:' + BLENDS[S.imgBlend] + '. */\n' : '') +
+    (S.tintOpacity > 0.001 ? '/* The ' + S.tintCol + ' tint (' + BLENDS[S.tintBlend] +
+              ', ' + S.tintOpacity.toFixed(2) + ') is not in this CSS. */\n' : '') +
     '.gradient{\n' +
     '  position:relative;\n' +
     '  width:' + S.w + 'px; height:' + S.h + 'px;\n' +
@@ -1889,11 +2459,17 @@ function svgCode(){
       '  <rect width="100%" height="100%" filter="url(#grain)" opacity="' + (S.grain*2.4).toFixed(2) +
       '" style="mix-blend-mode:overlay"/>'
     : '';
+  const fxNote = (S.fx
+    ? '\n<!-- The ' + EFFECTS[S.fx].n + ' layer lives in the shader and is not in this SVG.\n' +
+      '     Export as an image if you need it. -->'
+    : '') + (imgTex || S.tintOpacity > 0.001
+    ? '\n<!-- The image and tint layers are not in this SVG. -->'
+    : '');
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + S.w + '" height="' + S.h +
     '" viewBox="0 0 ' + S.w + ' ' + S.h + '">\n' +
     '  <defs>\n' + defs + '\n  </defs>\n' +
     '  <rect width="100%" height="100%" fill="' + S.base + '"/>\n' +
-    rects + grain + '\n</svg>';
+    rects + grain + fxNote + '\n</svg>';
 }
 
 let outKind = 'css';
