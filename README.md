@@ -87,7 +87,7 @@ on real-time capture.
 ## Interface
 
 Built in the flohack CI: light gradient ground, monospace throughout,
-lowercase, neon only as an accent. Six sections, nothing more:
+lowercase, neon only as an accent. Seven sections, nothing more:
 
 | Section | Holds |
 |---|---|
@@ -95,12 +95,13 @@ lowercase, neon only as an accent. Six sections, nothing more:
 | colours | ground colour and the individual points |
 | form | mode, spread, stretch, focus, warp |
 | finish | grain, motion, tone |
+| image | a photo, its blend mode, the layer opacities, the tint |
 | layer | the effect over the finished image |
 | export | format, files, code |
 
-All six start collapsed — the canvas gets the screen, and the panel is
+All seven start collapsed — the canvas gets the screen, and the panel is
 opened where it is needed. The **essentials / everything** switch decides
-how much is inside: 12 sliders or 34. Everything stays reachable, it just
+how much is inside: 15 sliders or 40. Everything stays reachable, it just
 is not all shown at once.
 
 ## Looks
@@ -261,6 +262,40 @@ warp field is sampled along a closed circular path. After the set loop
 duration the image is back exactly where it started — a seamless loop
 with no visible cut.
 
+## Image, ground and tint
+
+`image` turns the canvas into a small layer stack. From the bottom:
+
+| Layer | Controls |
+|---|---|
+| ground | The `colours` ground colour, now also a real backdrop |
+| gradient | `gradient` — its opacity over the ground |
+| photo | file, `cover` / `contain` / `fill`, zoom, shift, blend mode, `photo` opacity |
+| tint | a flat colour with its own blend mode and `tint amount` |
+
+Then tone, then the effect layer, then the grain. Tone runs **after** the
+stack on purpose: contrast, saturation, vignette and posterise grade the whole
+picture, the photo included.
+
+Drop an image anywhere on the canvas, or use `load photo`. Oversized files are
+scaled down to the GPU's texture limit first, so a phone shot works. Seven
+blend modes — normal, multiply, screen, overlay, soft light, difference,
+luminosity — following the W3C compositing formulas, on straight sRGB.
+
+Two things fall out of this that are worth knowing:
+
+- **A flat colour**: pull `gradient` to 0 and the canvas is the ground colour,
+  full stop. No separate mode needed — and it is still a full export target,
+  grain and effect layer included.
+- **The effect layer runs over the photo**, because the stack is built before
+  the effect. That is the point: a dithered, rastered or ASCII-rendered
+  photograph, in the photo's own colours.
+
+The photo lives in the browser session. A preset, a `.json` or `localStorage`
+keeps every setting — fit, blend, opacities, tint — but not the pixels; a
+few megabytes of Base64 in a preset file would be the wrong trade. After a
+reload the values are there and the image has to be dropped again.
+
 ## Effect layer
 
 `layer` puts one effect over the finished image — after the blend and the
@@ -322,7 +357,10 @@ next to it as `.json`.
 - *Conic* and *Spiral* carry a singularity at the centre by nature. For
   calm bands use Mesh with stretched points instead.
 - The effect layer has no CSS or SVG equivalent — export as an image or a
-  video if the effect has to travel.
+  video if the effect has to travel. The same goes for the photo and the
+  tint; both exports write a comment saying what is missing.
+- No transparent PNG yet. The stack always composites over the ground
+  colour, and the WebGL context runs without an alpha channel on purpose.
 - `rotation` closes the loop only at whole turns — at 0.5 the points end up
   half a revolution on when the clip restarts. That already applied to the
   global slider; a point's own share multiplies it.
